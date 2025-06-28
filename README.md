@@ -45,19 +45,17 @@ Access to repository design object and server information to understand behavior
 ### Binary Payload Awareness
 Discovery of attached binary files with metadata (names, sizes, types) without downloading the actual content.
 
-## Operations
+## MCP Architecture
 
-The MCP server provides eight essential operations:
+### Resources
+- `cordra://schemas/` - List all available schema types
+- `cordra://schemas/{type_name}` - Schema definition for a specific type
+- `cordra://objects/` - Browse repository objects
+- `cordra://objects/{object_id}` - Object metadata and content
+- `cordra://design_object/` - Repository design configuration
 
-### 1. `get_object`
-Retrieve a specific digital object by its ID or handle, including all metadata and content.
-
-**Parameters:**
-- `id` (string): Object identifier or handle
-
-**Returns:** Complete object JSON with metadata
-
-### 2. `search_objects`
+### Tools
+#### `search_objects`
 Search for objects using queries, filters, and sorting options with pagination support.
 
 **Parameters:**
@@ -68,45 +66,6 @@ Search for objects using queries, filters, and sorting options with pagination s
 - `sortFields` (string, optional): Fields to sort by
 
 **Returns:** Search results with object summaries and pagination info
-
-### 3. `list_schemas`
-List all available schemas/types in the repository.
-
-**Returns:** Array of schema names and basic information
-
-### 4. `get_schema`
-Retrieve detailed schema definition for a specific object type.
-
-**Parameters:**
-- `type` (string): Schema/type name
-
-**Returns:** Complete JSON schema with Cordra-specific extensions
-
-### 5. `list_payloads`
-List binary payloads attached to a specific object.
-
-**Parameters:**
-- `id` (string): Object identifier or handle
-
-**Returns:** Array of payload metadata (names, sizes, content types)
-
-### 6. `get_object_acl`
-Retrieve access control list for a specific object.
-
-**Parameters:**
-- `id` (string): Object identifier or handle
-
-**Returns:** Object permissions including readers and writers
-
-### 7. `get_server_info`
-Get server version, capabilities, and technical information.
-
-**Returns:** Server metadata and configuration details
-
-### 8. `get_design_object`
-Retrieve the repository's design object containing behavioral configuration.
-
-**Returns:** Repository configuration including authorization settings, handle minting rules, and UI behavior
 
 ## Configuration
 
