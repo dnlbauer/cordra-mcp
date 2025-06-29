@@ -83,6 +83,32 @@ async def list_cordra_schemas() -> str:
         raise RuntimeError(f"Failed to list schemas: {e}") from e
 
 
+@mcp.resource("cordra://schemas/{schema_name}", name="cordra-schema", description="Retrieve a specific Cordra schema definition by name")
+async def get_cordra_schema(schema_name: str) -> str:
+    """Retrieve a Cordra schema definition by its name.
+    
+    Args:
+        schema_name: The name of the schema to retrieve (e.g., 'Person', 'Document')
+        
+    Returns:
+        JSON representation of the schema definition
+        
+    Raises:
+        RuntimeError: If the schema is not found or there's an API error
+    """
+    try:
+        schema_object = await cordra_client.get_schema(schema_name)
+        schema_dict = schema_object.model_dump()
+        return json.dumps(schema_dict, indent=2)
+
+    except CordraNotFoundError:
+        raise RuntimeError(f"Schema not found: {schema_name}")
+    except CordraAuthenticationError as e:
+        raise RuntimeError(f"Authentication failed: {e}") from e
+    except CordraClientError as e:
+        raise RuntimeError(f"Failed to retrieve schema {schema_name}: {e}") from e
+
+
 @mcp.tool()
 async def ping() -> str:
     """Simple ping tool to test server connectivity."""

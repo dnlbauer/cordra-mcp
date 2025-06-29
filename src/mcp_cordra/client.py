@@ -149,3 +149,37 @@ class CordraClient:
         
         except requests.RequestException as e:
             raise CordraClientError(f"Failed to search with query '{query}': {e}") from e
+
+    async def get_schema(self, schema_name: str) -> DigitalObject:
+        """Retrieve a schema definition by its name.
+        
+        Args:
+            schema_name: The name of the schema to retrieve
+            
+        Returns:
+            The schema object containing the type definition
+            
+        Raises:
+            CordraNotFoundError: If the schema is not found
+            CordraAuthenticationError: If authentication fails
+            CordraClientError: For other API errors
+        """
+        # Search for the specific schema by name using correct query format
+        query = f"type:Schema AND /name:{schema_name}"
+        
+        try:
+            schemas = await self.find(query)
+            
+            if not schemas:
+                raise CordraNotFoundError(f"Schema '{schema_name}' not found")
+            
+            # Get the first matching schema (should be unique by name)
+            schema_data = schemas[0]
+            
+            # Get the full schema object using its ID
+            return await self.get_object(schema_data['id'])
+                
+        except (CordraNotFoundError, CordraAuthenticationError):
+            raise
+        except Exception as e:
+            raise CordraClientError(f"Failed to retrieve schema '{schema_name}': {e}") from e
