@@ -54,9 +54,8 @@ class CordraClient:
             CordraClientError: For other API errors
         """
         try:
-            # Use CordraPy to read the object
-            cordra_obj = cordra.CordraObject.read(
-                host=self.config.cordra_url,  # type: ignore
+            cordra_obj: dict[str, Any] = cordra.CordraObject.read(
+                host=self.config.cordra_url,  #type: ignore
                 obj_id=object_id,
                 username=self.config.username,
                 password=self.config.password,
@@ -66,11 +65,11 @@ class CordraClient:
 
             return DigitalObject(
                 id=object_id,
-                type=getattr(cordra_obj, 'type', ''),
-                content=getattr(cordra_obj, 'content', {}),
-                metadata=getattr(cordra_obj, 'metadata', None),
-                acl=getattr(cordra_obj, 'acl', None),
-                payloads=getattr(cordra_obj, 'payloads', None),
+                type=cordra_obj['type'],
+                content=cordra_obj['content'],
+                metadata=cordra_obj.get('metadata'),
+                acl=cordra_obj.get('acl'),
+                payloads=cordra_obj.get('payloads'),
             )
 
         except Exception as e:

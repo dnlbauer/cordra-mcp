@@ -1,6 +1,6 @@
 """Unit tests for the Cordra client."""
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -32,27 +32,27 @@ def client(config):
 
 @pytest.fixture
 def mock_cordra_object():
-    """Create a mock CordraObject."""
-    mock_obj = Mock()
-    mock_obj.type = "TestType"
-    mock_obj.content = {"title": "Test Object", "description": "A test object"}
-    mock_obj.metadata = {"created": "2023-01-01", "modified": "2023-01-02"}
-    mock_obj.acl = {"read": ["public"], "write": ["admin"]}
-    mock_obj.payloads = [
-        {
-            "name": "file1.txt",
-            "filename": "file1.txt",
-            "size": 1024,
-            "mediaType": "text/plain"
-        },
-        {
-            "name": "file2.pdf", 
-            "filename": "file2.pdf",
-            "size": 2048,
-            "mediaType": "application/pdf"
-        }
-    ]
-    return mock_obj
+    """Create a mock CordraObject response (dictionary)."""
+    return {
+        "type": "TestType",
+        "content": {"title": "Test Object", "description": "A test object"},
+        "metadata": {"created": "2023-01-01", "modified": "2023-01-02"},
+        "acl": {"read": ["public"], "write": ["admin"]},
+        "payloads": [
+            {
+                "name": "file1.txt",
+                "filename": "file1.txt",
+                "size": 1024,
+                "mediaType": "text/plain"
+            },
+            {
+                "name": "file2.pdf", 
+                "filename": "file2.pdf",
+                "size": 2048,
+                "mediaType": "application/pdf"
+            }
+        ]
+    }
 
 
 class TestDigitalObject:
