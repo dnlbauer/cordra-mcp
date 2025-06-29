@@ -143,3 +143,105 @@ class TestGetCordraObject:
         assert parsed_result["metadata"] is None
         assert parsed_result["acl"] is None
         assert parsed_result["payloads"] is None
+
+
+class TestListCordraSchemas:
+    """Test the list_cordra_schemas resource handler."""
+
+    @patch('mcp_cordra.server.cordra_client')
+    async def test_list_schemas_success(self, mock_client):
+        """Test successful schema listing."""
+        mock_schemas = [
+            {"name": "User", "identifier": "test/user-schema"},
+            {"name": "Project", "identifier": "test/project-schema"},
+            {"name": "Document", "identifier": "test/doc-schema"},
+            {"name": "CaptureEvent", "identifier": "test/capture-schema"}
+        ]
+        mock_client.find = AsyncMock(return_value=mock_schemas)
+        
+        from mcp_cordra.server import list_cordra_schemas
+        result = await list_cordra_schemas()
+        
+        # Verify the result is valid JSON
+        parsed_result = json.loads(result)
+        assert "schemas" in parsed_result
+        assert "count" in parsed_result
+        assert parsed_result["count"] == 4
+        assert "User" in parsed_result["schemas"]
+        assert "Project" in parsed_result["schemas"] 
+        assert "Document" in parsed_result["schemas"]
+        assert "CaptureEvent" in parsed_result["schemas"]
+        
+        # Verify the client was called with correct query
+        mock_client.find.assert_called_once_with("type:Schema")
+
+    @patch('mcp_cordra.server.cordra_client')
+    async def test_list_schemas_empty(self, mock_client):
+        """Test schema listing with no results."""
+        mock_client.find = AsyncMock(return_value=[])
+        
+        from mcp_cordra.server import list_cordra_schemas
+        result = await list_cordra_schemas()
+        
+        parsed_result = json.loads(result)
+        assert parsed_result["schemas"] == []
+        assert parsed_result["count"] == 0
+        
+        mock_client.find.assert_called_once_with("type:Schema")
+
+    @patch('mcp_cordra.server.cordra_client')
+    async def test_list_schemas_missing_name_field(self, mock_client):
+        """Test schema listing with objects missing name field."""
+        mock_schemas = [
+            {"name": "User", "identifier": "test/user-schema"},
+            {"identifier": "test/no-name-schema"},  # Missing name field
+            {"name": "Project", "identifier": "test/project-schema"},
+            {"other": "field"}  # No name or identifier
+        ]
+        mock_client.find = AsyncMock(return_value=mock_schemas)
+        
+        from mcp_cordra.server import list_cordra_schemas
+        result = await list_cordra_schemas()
+        
+        parsed_result = json.loads(result)
+        assert parsed_result["count"] == 2  # Only objects with name field
+        assert "User" in parsed_result["schemas"]
+        assert "Project" in parsed_result["schemas"]
+        assert len(parsed_result["schemas"]) == 2
+
+    @patch('mcp_cordra.server.cordra_client')
+    async def test_list_schemas_client_error(self, mock_client):
+        """Test schema listing with client error."""
+        from mcp_cordra.client import CordraClientError
+        mock_client.find = AsyncMock(side_effect=CordraClientError("Search failed"))
+        
+        from mcp_cordra.server import list_cordra_schemas
+        with pytest.raises(RuntimeError) as exc_info:
+            await list_cordra_schemas()
+        
+        assert "Failed to list schemas" in str(exc_info.value)
+        assert "Search failed" in str(exc_info.value)
+
+    @patch('mcp_cordra.server.cordra_client')
+    async def test_list_schemas_json_format(self, mock_client):
+        """Test that the returned JSON is properly formatted."""
+        mock_schemas = [
+            {"name": "TestSchema", "identifier": "test/schema"}
+        ]
+        mock_client.find = AsyncMock(return_value=mock_schemas)
+        
+        from mcp_cordra.server import list_cordra_schemas
+        result = await list_cordra_schemas()
+        
+        # Verify it's valid JSON with proper indentation
+        parsed_result = json.loads(result)
+        assert isinstance(parsed_result, dict)
+        
+        # Check that the result contains indentation (pretty-printed)
+        assert "  " in result  # Should have 2-space indentation
+        
+        # Verify expected structure
+        assert "schemas" in parsed_result
+        assert "count" in parsed_result
+        assert isinstance(parsed_result["schemas"], list)
+        assert isinstance(parsed_result["count"], int)

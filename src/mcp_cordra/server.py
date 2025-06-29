@@ -42,6 +42,36 @@ async def get_cordra_object(prefix: str, suffix: str) -> str:
         raise RuntimeError(f"Failed to retrieve object {object_id}: {e}") from e
 
 
+@mcp.resource("cordra://schemas", name="cordra-schemas-list", description="List available Cordra type schemas")
+async def list_cordra_schemas() -> str:
+    """List available Cordra type schemas.
+    
+    Returns:
+        JSON array of available schema names
+        
+    Raises:
+        RuntimeError: If there's an API error
+    """
+    try:
+        # Use the client's find method to get all schema objects
+        schemas = await cordra_client.find("type:Schema")
+        
+        # Extract the names from the schema objects
+        schema_names = []
+        for schema in schemas:
+            if isinstance(schema, dict) and 'name' in schema:
+                schema_names.append(schema['name'])
+        
+        result = {
+            "schemas": schema_names,
+            "count": len(schema_names)
+        }
+        return json.dumps(result, indent=2)
+        
+    except Exception as e:
+        raise RuntimeError(f"Failed to list schemas: {e}") from e
+
+
 @mcp.tool()
 async def ping() -> str:
     """Simple ping tool to test server connectivity."""

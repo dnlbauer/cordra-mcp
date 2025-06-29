@@ -78,3 +78,32 @@ class CordraClient:
                 raise CordraNotFoundError(f"Object not found: {object_id}") from e
             raise CordraClientError(f"Failed to retrieve object {object_id}: {e}") from e
 
+    async def find(self, query: str) -> list[dict[str, Any]]:
+        """Find objects using a Cordra query.
+        
+        Args:
+            query: The query string to search for objects
+            
+        Returns:
+            List of objects matching the query as dictionaries
+            
+        Raises:
+            CordraClientError: If there's an API error
+        """
+        try:
+            # Use CordraPy to find objects
+            # TODO - need to handle pagination, but the CordraPy API does not support it.
+            response: dict[str, Any] = cordra.CordraObject.find(
+                self.config.cordra_url,  # type: ignore
+                query
+            )
+            
+            # Extract the results array from the response
+            if isinstance(response, dict) and 'results' in response:
+                return response['results']
+            else:
+                return []
+        
+        except Exception as e:
+            raise CordraClientError(f"Failed to search with query '{query}': {e}") from e
+

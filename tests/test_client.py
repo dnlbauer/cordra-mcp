@@ -156,6 +156,66 @@ class TestCordraClient:
 
         assert "Failed to retrieve object test/123" in str(exc_info.value)
 
+    @patch('mcp_cordra.client.cordra.CordraObject.find')
+    async def test_find_success(self, mock_find, client):
+        """Test successful find operation."""
+        mock_response = {
+            "results": [
+                {"name": "User", "identifier": "test/user-schema"},
+                {"name": "Project", "identifier": "test/project-schema"},
+                {"name": "Document", "identifier": "test/doc-schema"}
+            ],
+            "size": 3
+        }
+        mock_find.return_value = mock_response
+        
+        result = await client.find("type:Schema")
+        
+        assert len(result) == 3
+        assert result[0]["name"] == "User"
+        assert result[1]["name"] == "Project"
+        assert result[2]["name"] == "Document"
+        
+        mock_find.assert_called_once_with(
+            client.config.cordra_url,
+            "type:Schema"
+        )
+
+    @patch('mcp_cordra.client.cordra.CordraObject.find')
+    async def test_find_empty_results(self, mock_find, client):
+        """Test find with empty results."""
+        mock_response = {"results": [], "size": 0}
+        mock_find.return_value = mock_response
+        
+        result = await client.find("type:NonExistent")
+        
+        assert result == []
+        mock_find.assert_called_once_with(
+            client.config.cordra_url,
+            "type:NonExistent"
+        )
+
+    @patch('mcp_cordra.client.cordra.CordraObject.find')
+    async def test_find_no_results_key(self, mock_find, client):
+        """Test find with response missing results key."""
+        mock_response = {"size": 0}  # No results key
+        mock_find.return_value = mock_response
+        
+        result = await client.find("type:Schema")
+        
+        assert result == []
+
+    @patch('mcp_cordra.client.cordra.CordraObject.find')
+    async def test_find_error(self, mock_find, client):
+        """Test find error handling."""
+        mock_find.side_effect = Exception("Search failed")
+        
+        with pytest.raises(CordraClientError) as exc_info:
+            await client.find("invalid:query")
+        
+        assert "Failed to search with query 'invalid:query'" in str(exc_info.value)
+        assert "Search failed" in str(exc_info.value)
+
 
 class TestCordraConfig:
     """Test the CordraConfig class."""
