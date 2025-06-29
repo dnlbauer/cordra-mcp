@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 
 from mcp.server.fastmcp import FastMCP
 
@@ -20,6 +21,8 @@ mcp = FastMCP("mcp-cordra")
 config = CordraConfig()
 cordra_client = CordraClient(config)
 
+logger = logging.getLogger(__name__)
+
 
 @mcp.resource("cordra://objects/{prefix}/{suffix}", name="cordra-object", description="Retrieve a Cordra digital object by ID")
 async def get_cordra_object(prefix: str, suffix: str) -> str:
@@ -35,6 +38,7 @@ async def get_cordra_object(prefix: str, suffix: str) -> str:
     Raises:
         RuntimeError: If the object is not found or there's an API error
     """
+        
     object_id = f"{prefix}/{suffix}"
     try:
         digital_object = await cordra_client.get_object(object_id)
@@ -51,62 +55,49 @@ async def get_cordra_object(prefix: str, suffix: str) -> str:
         raise RuntimeError(f"Failed to retrieve object {object_id}: {e}") from e
 
 
-@mcp.resource("cordra://schemas", name="cordra-schemas-list", description="List available Cordra type schemas")
-async def list_cordra_schemas() -> str:
-    """List available Cordra type schemas.
-    
-    Returns:
-        JSON array of available schema names
-        
-    Raises:
-        RuntimeError: If there's an API error
-    """
-    try:
-        # Use the client's find method to get all schema objects
-        schemas = await cordra_client.find("type:Schema")
-        
-        # Extract the names from the schema objects
-        schema_names = []
-        for schema in schemas:
-            if isinstance(schema, dict) and 'content' in schema and 'name' in schema['content']:
-                schema_names.append(schema['content']['name'])
-        
-        result = {
-            "schemas": schema_names,
-            "count": len(schema_names)
-        }
-        return json.dumps(result, indent=2)
-        
-    except CordraAuthenticationError as e:
-        raise RuntimeError(f"Authentication failed: {e}") from e
-    except CordraClientError as e:
-        raise RuntimeError(f"Failed to list schemas: {e}") from e
-
-
-@mcp.resource("cordra://schemas/{schema_name}", name="cordra-schema", description="Retrieve a specific Cordra schema definition by name")
-async def get_cordra_schema(schema_name: str) -> str:
-    """Retrieve a Cordra schema definition by its name.
-    
-    Args:
-        schema_name: The name of the schema to retrieve (e.g., 'Person', 'Document')
-        
-    Returns:
-        JSON representation of the schema definition
-        
-    Raises:
-        RuntimeError: If the schema is not found or there's an API error
-    """
+async def create_schema_resource(schema_name: str) -> str:
+    """Create content for a specific schema resource."""
     try:
         schema_object = await cordra_client.get_schema(schema_name)
         schema_dict = schema_object.model_dump()
         return json.dumps(schema_dict, indent=2)
-
     except CordraNotFoundError:
         raise RuntimeError(f"Schema not found: {schema_name}")
     except CordraAuthenticationError as e:
         raise RuntimeError(f"Authentication failed: {e}") from e
     except CordraClientError as e:
         raise RuntimeError(f"Failed to retrieve schema {schema_name}: {e}") from e
+
+
+async def register_schema_resources():
+    """Register individual schema resources dynamically."""
+    try:
+        # Get all available schemas
+        schemas = await cordra_client.find("type:Schema")
+        
+        # Add individual schema resources
+        for schema in schemas:
+            if isinstance(schema, dict) and 'content' in schema and 'name' in schema['content']:
+                schema_name = schema['content']['name']
+                
+                # Create an async resource handler for this specific schema
+                # Use a closure to capture the schema_name properly
+                def make_schema_handler(captured_name):
+                    async def schema_handler():
+                        return await create_schema_resource(captured_name)
+                    return schema_handler
+                
+                # Register using the decorator approach
+                mcp.resource(
+                    f"cordra://schemas/{schema_name}",
+                    name=f"cordra-schema-{schema_name}",
+                    description=f"Cordra schema definition for {schema_name}"
+                )(make_schema_handler(schema_name))
+                
+        logger.info(f"Registered {len(schemas)} schema resources")
+        
+    except Exception as e:
+        logger.warning(f"Failed to register schema resources: {e}")
 
 
 @mcp.tool()
@@ -117,7 +108,12 @@ async def ping() -> str:
 
 def main() -> None:
     """Main entry point for the MCP server."""
-    asyncio.run(mcp.run())  # type: ignore
+    async def startup():
+        await register_schema_resources()
+    
+    # Run startup tasks, then start the server
+    asyncio.run(startup())
+    mcp.run()
 
 
 if __name__ == "__main__":
