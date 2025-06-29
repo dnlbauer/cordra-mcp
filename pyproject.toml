@@ -10,11 +10,9 @@ license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=1.2.0",
-    "httpx>=0.25.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
-    "cordrapy",
-    "setuptools>=80.9.0",
+    "requests>=2.25.0",
 ]
 
 [project.optional-dependencies]
@@ -56,8 +54,6 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "-v"
 
-[tool.uv.sources]
-cordrapy = { git = "https://github.com/usnistgov/CordraPy.git" }
 
 [dependency-groups]
 dev = [

@@ -152,10 +152,10 @@ class TestListCordraSchemas:
     async def test_list_schemas_success(self, mock_client):
         """Test successful schema listing."""
         mock_schemas = [
-            {"name": "User", "identifier": "test/user-schema"},
-            {"name": "Project", "identifier": "test/project-schema"},
-            {"name": "Document", "identifier": "test/doc-schema"},
-            {"name": "CaptureEvent", "identifier": "test/capture-schema"}
+            {"content": {"name": "User"}, "identifier": "test/user-schema"},
+            {"content": {"name": "Project"}, "identifier": "test/project-schema"},
+            {"content": {"name": "Document"}, "identifier": "test/doc-schema"},
+            {"content": {"name": "CaptureEvent"}, "identifier": "test/capture-schema"}
         ]
         mock_client.find = AsyncMock(return_value=mock_schemas)
         
@@ -193,10 +193,10 @@ class TestListCordraSchemas:
     async def test_list_schemas_missing_name_field(self, mock_client):
         """Test schema listing with objects missing name field."""
         mock_schemas = [
-            {"name": "User", "identifier": "test/user-schema"},
-            {"identifier": "test/no-name-schema"},  # Missing name field
-            {"name": "Project", "identifier": "test/project-schema"},
-            {"other": "field"}  # No name or identifier
+            {"content": {"name": "User"}, "identifier": "test/user-schema"},
+            {"content": {}, "identifier": "test/no-name-schema"},  # Missing name field
+            {"content": {"name": "Project"}, "identifier": "test/project-schema"},
+            {"content": {"other": "field"}}  # No name or identifier
         ]
         mock_client.find = AsyncMock(return_value=mock_schemas)
         
@@ -226,7 +226,7 @@ class TestListCordraSchemas:
     async def test_list_schemas_json_format(self, mock_client):
         """Test that the returned JSON is properly formatted."""
         mock_schemas = [
-            {"name": "TestSchema", "identifier": "test/schema"}
+            {"content": {"name": "TestSchema"}, "identifier": "test/schema"}
         ]
         mock_client.find = AsyncMock(return_value=mock_schemas)
         

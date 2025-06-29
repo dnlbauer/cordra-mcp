@@ -59,8 +59,8 @@ async def list_cordra_schemas() -> str:
         # Extract the names from the schema objects
         schema_names = []
         for schema in schemas:
-            if isinstance(schema, dict) and 'name' in schema:
-                schema_names.append(schema['name'])
+            if isinstance(schema, dict) and 'content' in schema and 'name' in schema['content']:
+                schema_names.append(schema['content']['name'])
         
         result = {
             "schemas": schema_names,
