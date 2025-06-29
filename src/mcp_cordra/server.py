@@ -16,7 +16,7 @@ async def ping() -> str:
 
 def main() -> None:
     """Main entry point for the MCP server."""
-    asyncio.run(mcp.run())
+    asyncio.run(mcp.run())  # type: ignore
 
 
 if __name__ == "__main__":

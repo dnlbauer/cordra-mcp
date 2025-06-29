@@ -10,10 +10,11 @@ license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=1.2.0",
-    "CordraPy",
     "httpx>=0.25.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
+    "cordrapy",
+    "setuptools>=80.9.0",
 ]
 
 [project.optional-dependencies]
@@ -46,7 +47,19 @@ python_version = "3.11"
 strict = true
 warn_return_any = true
 
+[[tool.mypy.overrides]]
+module = ["cordra.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "--cov=src/mcp_cordra --cov-report=term-missing"
+addopts = "-v"
+
+[tool.uv.sources]
+cordrapy = { git = "https://github.com/usnistgov/CordraPy.git" }
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.0.0",
+]
