@@ -8,6 +8,7 @@ from mcp_cordra.client import (
     CordraClient,
     CordraClientError,
     CordraNotFoundError,
+    CordraAuthenticationError,
     DigitalObject,
 )
 from mcp_cordra.config import CordraConfig
@@ -141,11 +142,12 @@ class TestCordraClient:
         """Test object not found exception."""
         mock_response = mock_get.return_value
         mock_response.status_code = 404
+        mock_response.ok = False
 
         with pytest.raises(CordraNotFoundError) as exc_info:
             await client.get_object("test/nonexistent")
 
-        assert "Object not found: test/nonexistent" in str(exc_info.value)
+        assert "Resource not found" in str(exc_info.value)
 
     @patch('mcp_cordra.client.requests.Session.get')
     async def test_get_object_general_error(self, mock_get, client):

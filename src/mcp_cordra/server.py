@@ -5,7 +5,12 @@ import json
 
 from mcp.server.fastmcp import FastMCP
 
-from .client import CordraClient, CordraClientError, CordraNotFoundError
+from .client import (
+    CordraClient,
+    CordraClientError,
+    CordraNotFoundError,
+    CordraAuthenticationError,
+)
 from .config import CordraConfig
 
 # Initialize the MCP server
@@ -36,8 +41,12 @@ async def get_cordra_object(prefix: str, suffix: str) -> str:
         object_dict = digital_object.model_dump()
         return json.dumps(object_dict, indent=2)
 
-    except CordraNotFoundError as e:
-        raise RuntimeError(f"Object not found: {object_id}") from e
+    except ValueError as e:
+        raise RuntimeError(f"Invalid parameters: {e}") from e
+    except CordraNotFoundError:
+        raise RuntimeError(f"Object not found: {object_id}")
+    except CordraAuthenticationError as e:
+        raise RuntimeError(f"Authentication failed: {e}") from e
     except CordraClientError as e:
         raise RuntimeError(f"Failed to retrieve object {object_id}: {e}") from e
 
@@ -68,7 +77,9 @@ async def list_cordra_schemas() -> str:
         }
         return json.dumps(result, indent=2)
         
-    except Exception as e:
+    except CordraAuthenticationError as e:
+        raise RuntimeError(f"Authentication failed: {e}") from e
+    except CordraClientError as e:
         raise RuntimeError(f"Failed to list schemas: {e}") from e
 
 

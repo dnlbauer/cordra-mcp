@@ -32,6 +32,11 @@ class CordraNotFoundError(CordraClientError):
     pass
 
 
+class CordraAuthenticationError(CordraClientError):
+    """Exception raised for authentication/authorization failures."""
+    pass
+
+
 class CordraClient:
     """Client for interacting with Cordra repository using HTTP requests."""
 
@@ -51,6 +56,28 @@ class CordraClient:
         elif config.username or config.password:
             logger.warning("Only username or password provided, not both. Authentication may fail.")
 
+    def _handle_http_error(self, response: requests.Response, context: str) -> None:
+        """Handle HTTP errors and raise appropriate exceptions.
+        
+        Args:
+            response: The HTTP response object
+            context: Context description for the error message
+            
+        Raises:
+            CordraNotFoundError: For 404 errors
+            CordraAuthenticationError: For 401/403 errors  
+            CordraClientError: For other HTTP errors
+        """
+        status_code = response.status_code
+        if status_code == 404:
+            raise CordraNotFoundError(f"{context}: Resource not found")
+        elif status_code in (401, 403):
+            raise CordraAuthenticationError(f"{context}: Authentication failed (HTTP {status_code})")
+        elif status_code >= 500:
+            raise CordraClientError(f"{context}: Server error (HTTP {status_code})")
+        else:
+            raise CordraClientError(f"{context}: HTTP error {status_code}")
+
     async def get_object(self, object_id: str) -> DigitalObject:
         """Retrieve a digital object by its ID.
         
@@ -61,24 +88,22 @@ class CordraClient:
             The full digital object
             
         Raises:
+            ValueError: If object_id is empty
             CordraNotFoundError: If the object is not found
+            CordraAuthenticationError: If authentication fails
             CordraClientError: For other API errors
         """
+        url = f"{self.config.cordra_url}/objects/{object_id}"
+        params = {"full": "true"}
+        
         try:
-            # Build URL: cordra_base_url/objects/prefix/postfix
-            url = f"{self.config.cordra_url}/objects/{object_id}"
-            
-            # Add full=true parameter to get complete object details
-            params = {"full": "true"}
-            
             response = self.session.get(url, params=params, timeout=self.config.timeout)
             
-            if response.status_code == 404:
-                raise CordraNotFoundError(f"Object not found: {object_id}")
+            if not response.ok:
+                self._handle_http_error(response, f"Failed to retrieve object {object_id}")
             
-            response.raise_for_status()
             cordra_obj = response.json()
-
+            
             return DigitalObject(
                 id=object_id,
                 type=cordra_obj.get('type', ''),
@@ -87,12 +112,8 @@ class CordraClient:
                 acl=cordra_obj.get('acl'),
                 payloads=cordra_obj.get('payloads'),
             )
-
-        except CordraNotFoundError:
-            raise
+            
         except requests.RequestException as e:
-            raise CordraClientError(f"Failed to retrieve object {object_id}: {e}") from e
-        except Exception as e:
             raise CordraClientError(f"Failed to retrieve object {object_id}: {e}") from e
 
     async def find(self, query: str) -> list[dict[str, Any]]:
@@ -105,15 +126,18 @@ class CordraClient:
             List of objects matching the query as dictionaries
             
         Raises:
-            CordraClientError: If there's an API error
+            ValueError: If query is empty
+            CordraAuthenticationError: If authentication fails
+            CordraClientError: For other API errors
         """
+        url = f"{self.config.cordra_url}/search"
+        params = {"query": query}
+        
         try:
-            # Use HTTP GET request to search endpoint
-            url = f"{self.config.cordra_url}/search"
-            params = {"query": query}
-            
             response = self.session.get(url, params=params, timeout=self.config.timeout)
-            response.raise_for_status()
+            
+            if not response.ok:
+                self._handle_http_error(response, f"Failed to search with query '{query}'")
             
             search_result = response.json()
             
@@ -124,6 +148,4 @@ class CordraClient:
                 return []
         
         except requests.RequestException as e:
-            raise CordraClientError(f"Failed to search with query '{query}': {e}") from e
-        except Exception as e:
             raise CordraClientError(f"Failed to search with query '{query}': {e}") from e
