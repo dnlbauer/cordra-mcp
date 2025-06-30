@@ -27,7 +27,7 @@ Currently, none.
 
 ## Configuration
 
-The MCP server can be configured using environment variables with the `MCP_CORDRA_` prefix or a `.env` file:
+The MCP server can be configured using environment variables with the `MCP_CORDRA_` prefix:
 
 - `MCP_CORDRA_BASE_URL` - Cordra server URL (default: `https://localhost:8443`)
 - `MCP_CORDRA_USERNAME` - Username for authentication (optional)
