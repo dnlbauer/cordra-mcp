@@ -5,6 +5,7 @@ import json
 import logging
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.resources import FunctionResource
 
 from .client import (
     CordraClient,
@@ -24,21 +25,25 @@ cordra_client = CordraClient(config)
 logger = logging.getLogger(__name__)
 
 
-@mcp.resource("cordra://objects/{prefix}/{suffix}", name="cordra-object", description="Retrieve a Cordra digital object by ID")
+@mcp.resource(
+    "cordra://objects/{prefix}/{suffix}",
+    name="cordra-object",
+    description="Retrieve a Cordra digital object by ID",
+)
 async def get_cordra_object(prefix: str, suffix: str) -> str:
     """Retrieve a Cordra digital object by its ID.
-    
+
     Args:
         prefix: The prefix part of the object ID (e.g., 'wildlive')
         suffix: The suffix part of the object ID (e.g., '7a4b7b65f8bb155ad36d')
-        
+
     Returns:
         JSON representation of the digital object
-        
+
     Raises:
         RuntimeError: If the object is not found or there's an API error
     """
-        
+
     object_id = f"{prefix}/{suffix}"
     try:
         digital_object = await cordra_client.get_object(object_id)
@@ -69,33 +74,32 @@ async def create_schema_resource(schema_name: str) -> str:
         raise RuntimeError(f"Failed to retrieve schema {schema_name}: {e}") from e
 
 
-async def register_schema_resources():
+async def register_schema_resources() -> None:
     """Register individual schema resources dynamically."""
     try:
         # Get all available schemas
         schemas = await cordra_client.find("type:Schema")
-        
-        # Add individual schema resources
+
         for schema in schemas:
-            if isinstance(schema, dict) and 'content' in schema and 'name' in schema['content']:
-                schema_name = schema['content']['name']
-                
-                # Create an async resource handler for this specific schema
-                # Use a closure to capture the schema_name properly
-                def make_schema_handler(captured_name):
-                    async def schema_handler():
-                        return await create_schema_resource(captured_name)
-                    return schema_handler
-                
-                # Register using the decorator approach
-                mcp.resource(
-                    f"cordra://schemas/{schema_name}",
-                    name=f"cordra-schema-{schema_name}",
-                    description=f"Cordra schema definition for {schema_name}"
-                )(make_schema_handler(schema_name))
-                
+            schema_name = schema.get("content", {}).get("name")
+            if not schema_name:
+                logger.warning("Schema without a name found, skipping.")
+                continue
+
+            logger.info(f"Registering schema resource for cordra type {schema_name}")
+            async def schema_fn(name: str = schema_name) -> str:
+                return await create_schema_resource(name)
+            mcp.add_resource(
+                FunctionResource.from_function(
+                    uri=f"cordra://schemas/{schema_name}",
+                    fn=schema_fn,
+                    name=f"cordra-type-schema-{schema_name}",
+                    description=f"JSON schema for Cordra type {schema_name}",
+                )
+            )
+
         logger.info(f"Registered {len(schemas)} schema resources")
-        
+
     except Exception as e:
         logger.warning(f"Failed to register schema resources: {e}")
 
@@ -106,13 +110,16 @@ async def ping() -> str:
     return "pong"
 
 
+async def initialize_server() -> None:
+    """Initialize server resources before starting."""
+    logger.info("Initializing Cordra MCP server...")
+    await register_schema_resources()
+    logger.info("Server initialization complete")
+
+
 def main() -> None:
     """Main entry point for the MCP server."""
-    async def startup():
-        await register_schema_resources()
-    
-    # Run startup tasks, then start the server
-    asyncio.run(startup())
+    asyncio.run(initialize_server())
     mcp.run()
 
 
