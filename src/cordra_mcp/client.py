@@ -1,7 +1,7 @@
 """Cordra client wrapper using HTTP requests."""
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 import requests
 from pydantic import BaseModel, Field
@@ -19,21 +19,26 @@ class DigitalObject(BaseModel):
     content: dict[str, Any] = Field(description="Object content as JSON")
     metadata: dict[str, Any] | None = Field(default=None, description="Object metadata")
     acl: dict[str, Any] | None = Field(default=None, description="Access control list")
-    payloads: list[dict[str, Any]] | None = Field(default=None, description="List of payloads")
+    payloads: list[dict[str, Any]] | None = Field(
+        default=None, description="List of payloads"
+    )
 
 
 class CordraClientError(Exception):
     """Base exception for Cordra client errors."""
+
     pass
 
 
 class CordraNotFoundError(CordraClientError):
     """Exception raised when an object is not found."""
+
     pass
 
 
 class CordraAuthenticationError(CordraClientError):
     """Exception raised for authentication/authorization failures."""
+
     pass
 
 
@@ -54,7 +59,9 @@ class CordraClient:
         if config.username and config.password:
             self.session.auth = (config.username, config.password)
         elif config.username or config.password:
-            logger.warning("Only username or password provided, not both. Authentication may fail.")
+            logger.warning(
+                "Only username or password provided, not both. Authentication may fail."
+            )
 
     def _handle_http_error(self, response: requests.Response, context: str) -> None:
         """Handle HTTP errors and raise appropriate exceptions.
@@ -72,7 +79,9 @@ class CordraClient:
         if status_code == 404:
             raise CordraNotFoundError(f"{context}: Resource not found")
         elif status_code in (401, 403):
-            raise CordraAuthenticationError(f"{context}: Authentication failed (HTTP {status_code})")
+            raise CordraAuthenticationError(
+                f"{context}: Authentication failed (HTTP {status_code})"
+            )
         elif status_code >= 500:
             raise CordraClientError(f"{context}: Server error (HTTP {status_code})")
         else:
@@ -100,21 +109,25 @@ class CordraClient:
             response = self.session.get(url, params=params, timeout=self.config.timeout)
 
             if not response.ok:
-                self._handle_http_error(response, f"Failed to retrieve object {object_id}")
+                self._handle_http_error(
+                    response, f"Failed to retrieve object {object_id}"
+                )
 
             cordra_obj = response.json()
 
             return DigitalObject(
                 id=object_id,
-                type=cordra_obj.get('type', ''),
-                content=cordra_obj.get('content', cordra_obj),
-                metadata=cordra_obj.get('metadata'),
-                acl=cordra_obj.get('acl'),
-                payloads=cordra_obj.get('payloads'),
+                type=cordra_obj.get("type", ""),
+                content=cordra_obj.get("content", cordra_obj),
+                metadata=cordra_obj.get("metadata"),
+                acl=cordra_obj.get("acl"),
+                payloads=cordra_obj.get("payloads"),
             )
 
         except requests.RequestException as e:
-            raise CordraClientError(f"Failed to retrieve object {object_id}: {e}") from e
+            raise CordraClientError(
+                f"Failed to retrieve object {object_id}: {e}"
+            ) from e
 
     async def find(self, query: str) -> list[dict[str, Any]]:
         """Find objects using a Cordra query.
@@ -137,18 +150,22 @@ class CordraClient:
             response = self.session.get(url, params=params, timeout=self.config.timeout)
 
             if not response.ok:
-                self._handle_http_error(response, f"Failed to search with query '{query}'")
+                self._handle_http_error(
+                    response, f"Failed to search with query '{query}'"
+                )
 
             search_result = response.json()
 
             # Extract the results array from the response
-            if isinstance(search_result, dict) and 'results' in search_result:
-                return search_result['results']
+            if isinstance(search_result, dict) and "results" in search_result:
+                return search_result["results"]  # type: ignore
             else:
                 return []
 
         except requests.RequestException as e:
-            raise CordraClientError(f"Failed to search with query '{query}': {e}") from e
+            raise CordraClientError(
+                f"Failed to search with query '{query}': {e}"
+            ) from e
 
     async def get_schema(self, schema_name: str) -> DigitalObject:
         """Retrieve a schema definition by its name.
@@ -177,9 +194,11 @@ class CordraClient:
             schema_data = schemas[0]
 
             # Get the full schema object using its ID
-            return await self.get_object(schema_data['id'])
+            return await self.get_object(schema_data["id"])
 
         except (CordraNotFoundError, CordraAuthenticationError):
             raise
         except Exception as e:
-            raise CordraClientError(f"Failed to retrieve schema '{schema_name}': {e}") from e
+            raise CordraClientError(
+                f"Failed to retrieve schema '{schema_name}': {e}"
+            ) from e

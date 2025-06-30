@@ -4,8 +4,9 @@ import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from mcp_cordra.client import CordraClientError, CordraNotFoundError, DigitalObject
-from mcp_cordra.server import get_cordra_object
+
+from cordra_mcp.client import CordraClientError, CordraNotFoundError, DigitalObject
+from cordra_mcp.server import get_cordra_object
 
 
 @pytest.fixture
@@ -35,7 +36,7 @@ def sample_digital_object():
 class TestGetCordraObject:
     """Test the get_cordra_object resource handler."""
 
-    @patch('mcp_cordra.server.cordra_client')
+    @patch('cordra_mcp.server.cordra_client')
     async def test_get_object_success(self, mock_client, sample_digital_object):
         """Test successful object retrieval."""
         mock_client.get_object = AsyncMock(return_value=sample_digital_object)
@@ -55,7 +56,7 @@ class TestGetCordraObject:
         # Verify the client was called with the correct object ID
         mock_client.get_object.assert_called_once_with("people/john-doe-123")
 
-    @patch('mcp_cordra.server.cordra_client')
+    @patch('cordra_mcp.server.cordra_client')
     async def test_get_object_not_found(self, mock_client):
         """Test object not found exception."""
         mock_client.get_object = AsyncMock(
@@ -68,7 +69,7 @@ class TestGetCordraObject:
         assert "Object not found: people/nonexistent" in str(exc_info.value)
         mock_client.get_object.assert_called_once_with("people/nonexistent")
 
-    @patch('mcp_cordra.server.cordra_client')
+    @patch('cordra_mcp.server.cordra_client')
     async def test_get_object_client_error(self, mock_client):
         """Test general client error handling."""
         mock_client.get_object = AsyncMock(
@@ -82,7 +83,7 @@ class TestGetCordraObject:
         assert "Connection failed" in str(exc_info.value)
         mock_client.get_object.assert_called_once_with("people/john-doe-123")
 
-    @patch('mcp_cordra.server.cordra_client')
+    @patch('cordra_mcp.server.cordra_client')
     async def test_object_id_construction(self, mock_client, sample_digital_object):
         """Test that object ID is correctly constructed from prefix and suffix."""
         mock_client.get_object = AsyncMock(return_value=sample_digital_object)
@@ -98,7 +99,7 @@ class TestGetCordraObject:
             await get_cordra_object(prefix, suffix)
             mock_client.get_object.assert_called_with(expected_id)
 
-    @patch('mcp_cordra.server.cordra_client')
+    @patch('cordra_mcp.server.cordra_client')
     async def test_json_formatting(self, mock_client, sample_digital_object):
         """Test that the returned JSON is properly formatted."""
         mock_client.get_object = AsyncMock(return_value=sample_digital_object)
@@ -120,7 +121,7 @@ class TestGetCordraObject:
         assert "acl" in parsed_result
         assert "payloads" in parsed_result
 
-    @patch('mcp_cordra.server.cordra_client')
+    @patch('cordra_mcp.server.cordra_client')
     async def test_minimal_object(self, mock_client):
         """Test handling of object with minimal data."""
         minimal_object = DigitalObject(
@@ -147,7 +148,7 @@ class TestGetCordraObject:
 class TestSchemaResourceFunctions:
     """Test the schema resource functions."""
 
-    @patch('mcp_cordra.server.cordra_client')
+    @patch('cordra_mcp.server.cordra_client')
     async def test_create_schema_resource_success(self, mock_client):
         """Test successful schema resource creation."""
         mock_schema = DigitalObject(
@@ -157,7 +158,7 @@ class TestSchemaResourceFunctions:
         )
         mock_client.get_schema = AsyncMock(return_value=mock_schema)
 
-        from mcp_cordra.server import create_schema_resource
+        from cordra_mcp.server import create_schema_resource
         result = await create_schema_resource("User")
 
         # Verify the result is valid JSON
@@ -169,19 +170,19 @@ class TestSchemaResourceFunctions:
         # Verify the client was called with correct schema name
         mock_client.get_schema.assert_called_once_with("User")
 
-    @patch('mcp_cordra.server.cordra_client')
+    @patch('cordra_mcp.server.cordra_client')
     async def test_create_schema_resource_not_found(self, mock_client):
         """Test schema resource creation with schema not found."""
         mock_client.get_schema = AsyncMock(side_effect=CordraNotFoundError("Schema not found"))
 
-        from mcp_cordra.server import create_schema_resource
+        from cordra_mcp.server import create_schema_resource
         with pytest.raises(RuntimeError) as exc_info:
             await create_schema_resource("NonExistent")
 
         assert "Schema not found: NonExistent" in str(exc_info.value)
         mock_client.get_schema.assert_called_once_with("NonExistent")
 
-    @patch('mcp_cordra.server.cordra_client')
+    @patch('cordra_mcp.server.cordra_client')
     async def test_register_schema_resources_success(self, mock_client):
         """Test successful schema resource registration."""
         mock_schemas = [
@@ -192,8 +193,8 @@ class TestSchemaResourceFunctions:
         mock_client.find = AsyncMock(return_value=mock_schemas)
 
         # Mock the mcp.add_resource method
-        with patch('mcp_cordra.server.mcp') as mock_mcp:
-            from mcp_cordra.server import register_schema_resources
+        with patch('cordra_mcp.server.mcp') as mock_mcp:
+            from cordra_mcp.server import register_schema_resources
             await register_schema_resources()
 
         # Verify the client was called with correct query
@@ -202,7 +203,7 @@ class TestSchemaResourceFunctions:
         # Verify add_resource was called for each schema
         assert mock_mcp.add_resource.call_count == 3
 
-    @patch('mcp_cordra.server.cordra_client')
+    @patch('cordra_mcp.server.cordra_client')
     async def test_register_schema_resources_missing_name(self, mock_client):
         """Test schema resource registration with objects missing name field."""
         mock_schemas = [
@@ -212,20 +213,20 @@ class TestSchemaResourceFunctions:
         ]
         mock_client.find = AsyncMock(return_value=mock_schemas)
 
-        with patch('mcp_cordra.server.mcp') as mock_mcp:
-            from mcp_cordra.server import register_schema_resources
+        with patch('cordra_mcp.server.mcp') as mock_mcp:
+            from cordra_mcp.server import register_schema_resources
             await register_schema_resources()
 
         # Only 2 schemas should be registered (those with name field)
         assert mock_mcp.add_resource.call_count == 2
 
-    @patch('mcp_cordra.server.cordra_client')
+    @patch('cordra_mcp.server.cordra_client')
     async def test_register_schema_resources_client_error(self, mock_client):
         """Test schema resource registration with client error."""
         mock_client.find = AsyncMock(side_effect=CordraClientError("Search failed"))
 
         # Should not raise an exception, just log a warning
-        from mcp_cordra.server import register_schema_resources
+        from cordra_mcp.server import register_schema_resources
         await register_schema_resources()  # Should complete without raising
 
         mock_client.find.assert_called_once_with("type:Schema")
