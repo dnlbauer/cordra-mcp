@@ -106,11 +106,6 @@ async def register_schema_resources() -> None:
         logger.warning(f"Failed to register schema resources: {e}")
 
 
-@mcp.tool()
-async def ping() -> str:
-    """Simple ping tool to test server connectivity."""
-    return "pong"
-
 
 async def initialize_server() -> None:
     """Initialize server resources before starting."""

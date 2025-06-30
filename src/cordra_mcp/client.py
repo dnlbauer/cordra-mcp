@@ -1,7 +1,7 @@
 """Cordra client wrapper using HTTP requests."""
 
 import logging
-from typing import Any, cast
+from typing import Any
 
 import requests
 from pydantic import BaseModel, Field
