@@ -314,7 +314,7 @@ cli = [
 ]
 
 [[package]]
-name = "mcp-cordra"
+name = "cordra-mcp"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

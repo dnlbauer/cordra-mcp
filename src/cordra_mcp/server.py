@@ -16,7 +16,7 @@ from .client import (
 from .config import CordraConfig
 
 # Initialize the MCP server
-mcp = FastMCP("mcp-cordra")
+mcp = FastMCP("cordra-mcp")
 
 # Initialize Cordra client at startup
 config = CordraConfig()
@@ -87,8 +87,10 @@ async def register_schema_resources() -> None:
                 continue
 
             logger.info(f"Registering schema resource for cordra type {schema_name}")
+
             async def schema_fn(name: str = schema_name) -> str:
                 return await create_schema_resource(name)
+
             mcp.add_resource(
                 FunctionResource.from_function(
                     uri=f"cordra://schemas/{schema_name}",
