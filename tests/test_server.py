@@ -4,7 +4,6 @@ import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from mcp_cordra.client import CordraClientError, CordraNotFoundError, DigitalObject
 from mcp_cordra.server import get_cordra_object
 
@@ -199,7 +198,7 @@ class TestSchemaResourceFunctions:
 
         # Verify the client was called with correct query
         mock_client.find.assert_called_once_with("type:Schema")
-        
+
         # Verify add_resource was called for each schema
         assert mock_mcp.add_resource.call_count == 3
 

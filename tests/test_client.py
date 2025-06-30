@@ -3,7 +3,6 @@
 from unittest.mock import patch
 
 import pytest
-
 from mcp_cordra.client import (
     CordraClient,
     CordraClientError,
