@@ -8,10 +8,10 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.resources import FunctionResource
 
 from .client import (
+    CordraAuthenticationError,
     CordraClient,
     CordraClientError,
     CordraNotFoundError,
-    CordraAuthenticationError,
 )
 from .config import CordraConfig
 
@@ -52,8 +52,8 @@ async def get_cordra_object(prefix: str, suffix: str) -> str:
 
     except ValueError as e:
         raise RuntimeError(f"Invalid parameters: {e}") from e
-    except CordraNotFoundError:
-        raise RuntimeError(f"Object not found: {object_id}")
+    except CordraNotFoundError as e:
+        raise RuntimeError(f"Object not found: {object_id}") from e
     except CordraAuthenticationError as e:
         raise RuntimeError(f"Authentication failed: {e}") from e
     except CordraClientError as e:
@@ -66,8 +66,8 @@ async def create_schema_resource(schema_name: str) -> str:
         schema_object = await cordra_client.get_schema(schema_name)
         schema_dict = schema_object.model_dump()
         return json.dumps(schema_dict, indent=2)
-    except CordraNotFoundError:
-        raise RuntimeError(f"Schema not found: {schema_name}")
+    except CordraNotFoundError as e:
+        raise RuntimeError(f"Schema not found: {schema_name}") from e
     except CordraAuthenticationError as e:
         raise RuntimeError(f"Authentication failed: {e}") from e
     except CordraClientError as e:

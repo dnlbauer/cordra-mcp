@@ -8,7 +8,6 @@ from mcp_cordra.client import (
     CordraClient,
     CordraClientError,
     CordraNotFoundError,
-    CordraAuthenticationError,
     DigitalObject,
 )
 from mcp_cordra.config import CordraConfig
@@ -47,7 +46,7 @@ def mock_cordra_object():
                 "mediaType": "text/plain"
             },
             {
-                "name": "file2.pdf", 
+                "name": "file2.pdf",
                 "filename": "file2.pdf",
                 "size": 2048,
                 "mediaType": "application/pdf"
@@ -175,14 +174,14 @@ class TestCordraClient:
         mock_response.status_code = 200
         mock_response.json.return_value = mock_response_data
         mock_response.raise_for_status.return_value = None
-        
+
         result = await client.find("type:Schema")
-        
+
         assert len(result) == 3
         assert result[0]["name"] == "User"
         assert result[1]["name"] == "Project"
         assert result[2]["name"] == "Document"
-        
+
         mock_get.assert_called_once_with(
             "https://test.example.com/search",
             params={"query": "type:Schema"},
@@ -197,9 +196,9 @@ class TestCordraClient:
         mock_response.status_code = 200
         mock_response.json.return_value = mock_response_data
         mock_response.raise_for_status.return_value = None
-        
+
         result = await client.find("type:NonExistent")
-        
+
         assert result == []
         mock_get.assert_called_once_with(
             "https://test.example.com/search",
@@ -215,9 +214,9 @@ class TestCordraClient:
         mock_response.status_code = 200
         mock_response.json.return_value = mock_response_data
         mock_response.raise_for_status.return_value = None
-        
+
         result = await client.find("type:Schema")
-        
+
         assert result == []
 
     @patch('mcp_cordra.client.requests.Session.get')
@@ -225,10 +224,10 @@ class TestCordraClient:
         """Test find error handling."""
         from requests import RequestException
         mock_get.side_effect = RequestException("Search failed")
-        
+
         with pytest.raises(CordraClientError) as exc_info:
             await client.find("invalid:query")
-        
+
         assert "Failed to search with query 'invalid:query'" in str(exc_info.value)
         assert "Search failed" in str(exc_info.value)
 

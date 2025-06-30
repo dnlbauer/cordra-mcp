@@ -42,14 +42,14 @@ class CordraClient:
 
     def __init__(self, config: CordraConfig) -> None:
         """Initialize the Cordra client.
-        
+
         Args:
             config: Configuration settings for the Cordra connection
         """
         self.config = config
         self.session = requests.Session()
         self.session.verify = config.verify_ssl
-        
+
         # Set up authentication
         if config.username and config.password:
             self.session.auth = (config.username, config.password)
@@ -58,14 +58,14 @@ class CordraClient:
 
     def _handle_http_error(self, response: requests.Response, context: str) -> None:
         """Handle HTTP errors and raise appropriate exceptions.
-        
+
         Args:
             response: The HTTP response object
             context: Context description for the error message
-            
+
         Raises:
             CordraNotFoundError: For 404 errors
-            CordraAuthenticationError: For 401/403 errors  
+            CordraAuthenticationError: For 401/403 errors
             CordraClientError: For other HTTP errors
         """
         status_code = response.status_code
@@ -80,13 +80,13 @@ class CordraClient:
 
     async def get_object(self, object_id: str) -> DigitalObject:
         """Retrieve a digital object by its ID.
-        
+
         Args:
             object_id: The unique identifier of the object to retrieve
-            
+
         Returns:
             The full digital object
-            
+
         Raises:
             ValueError: If object_id is empty
             CordraNotFoundError: If the object is not found
@@ -95,15 +95,15 @@ class CordraClient:
         """
         url = f"{self.config.cordra_url}/objects/{object_id}"
         params = {"full": "true"}
-        
+
         try:
             response = self.session.get(url, params=params, timeout=self.config.timeout)
-            
+
             if not response.ok:
                 self._handle_http_error(response, f"Failed to retrieve object {object_id}")
-            
+
             cordra_obj = response.json()
-            
+
             return DigitalObject(
                 id=object_id,
                 type=cordra_obj.get('type', ''),
@@ -112,19 +112,19 @@ class CordraClient:
                 acl=cordra_obj.get('acl'),
                 payloads=cordra_obj.get('payloads'),
             )
-            
+
         except requests.RequestException as e:
             raise CordraClientError(f"Failed to retrieve object {object_id}: {e}") from e
 
     async def find(self, query: str) -> list[dict[str, Any]]:
         """Find objects using a Cordra query.
-        
+
         Args:
             query: The query string to search for objects
-            
+
         Returns:
             List of objects matching the query as dictionaries
-            
+
         Raises:
             ValueError: If query is empty
             CordraAuthenticationError: If authentication fails
@@ -132,33 +132,33 @@ class CordraClient:
         """
         url = f"{self.config.cordra_url}/search"
         params = {"query": query}
-        
+
         try:
             response = self.session.get(url, params=params, timeout=self.config.timeout)
-            
+
             if not response.ok:
                 self._handle_http_error(response, f"Failed to search with query '{query}'")
-            
+
             search_result = response.json()
-            
+
             # Extract the results array from the response
             if isinstance(search_result, dict) and 'results' in search_result:
                 return search_result['results']
             else:
                 return []
-        
+
         except requests.RequestException as e:
             raise CordraClientError(f"Failed to search with query '{query}': {e}") from e
 
     async def get_schema(self, schema_name: str) -> DigitalObject:
         """Retrieve a schema definition by its name.
-        
+
         Args:
             schema_name: The name of the schema to retrieve
-            
+
         Returns:
             The schema object containing the type definition
-            
+
         Raises:
             CordraNotFoundError: If the schema is not found
             CordraAuthenticationError: If authentication fails
@@ -166,19 +166,19 @@ class CordraClient:
         """
         # Search for the specific schema by name using correct query format
         query = f"type:Schema AND /name:{schema_name}"
-        
+
         try:
             schemas = await self.find(query)
-            
+
             if not schemas:
                 raise CordraNotFoundError(f"Schema '{schema_name}' not found")
-            
+
             # Get the first matching schema (should be unique by name)
             schema_data = schemas[0]
-            
+
             # Get the full schema object using its ID
             return await self.get_object(schema_data['id'])
-                
+
         except (CordraNotFoundError, CordraAuthenticationError):
             raise
         except Exception as e:
