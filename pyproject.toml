@@ -9,7 +9,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
-    "mcp>=1.2.0",
+    "mcp[cli]>=1.2.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "requests>=2.25.0",
@@ -57,5 +57,7 @@ addopts = "-v"
 
 [dependency-groups]
 dev = [
+    "mypy>=1.16.1",
     "pytest-asyncio>=1.0.0",
+    "ruff>=0.12.1",
 ]
