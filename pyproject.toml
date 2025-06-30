@@ -26,7 +26,7 @@ dev = [
 ]
 
 [project.scripts]
-cordra-mcp = "mcp_cordra.server:main"
+cordra-mcp = "cordra_mcp.server:main"
 
 [build-system]
 requires = ["hatchling"]
