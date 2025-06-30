@@ -17,7 +17,7 @@ from cordra_mcp.config import CordraConfig
 def config():
     """Create a test configuration."""
     return CordraConfig(
-        cordra_url="https://test.example.com",
+        base_url="https://test.example.com",
         username="testuser",
         password="testpass",
         verify_ssl=False,
@@ -239,7 +239,7 @@ class TestCordraConfig:
     def test_default_config(self):
         """Test default configuration values."""
         config = CordraConfig()
-        assert config.cordra_url == "https://localhost:8443"
+        assert config.base_url == "https://localhost:8443"
         assert config.username is None
         assert config.password is None
         assert config.max_search_results == 1000

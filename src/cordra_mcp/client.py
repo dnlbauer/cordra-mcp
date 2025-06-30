@@ -102,7 +102,7 @@ class CordraClient:
             CordraAuthenticationError: If authentication fails
             CordraClientError: For other API errors
         """
-        url = f"{self.config.cordra_url}/objects/{object_id}"
+        url = f"{self.config.base_url}/objects/{object_id}"
         params = {"full": "true"}
 
         try:
@@ -143,7 +143,7 @@ class CordraClient:
             CordraAuthenticationError: If authentication fails
             CordraClientError: For other API errors
         """
-        url = f"{self.config.cordra_url}/search"
+        url = f"{self.config.base_url}/search"
         params = {"query": query}
 
         try:
