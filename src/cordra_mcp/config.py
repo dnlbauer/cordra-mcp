@@ -8,7 +8,7 @@ class CordraConfig(BaseSettings):
     """Configuration for connecting to a Cordra repository."""
 
     model_config = SettingsConfigDict(
-        env_prefix="MCP_CORDRA_",
+        env_prefix="CORDRA_",
         case_sensitive=False,
     )
 

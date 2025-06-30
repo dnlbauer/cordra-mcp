@@ -27,14 +27,14 @@ Currently, none.
 
 ## Configuration
 
-The MCP server can be configured using environment variables with the `MCP_CORDRA_` prefix:
+The MCP server can be configured using environment variables with the `CORDRA_` prefix:
 
-- `MCP_CORDRA_BASE_URL` - Cordra server URL (default: `https://localhost:8443`)
-- `MCP_CORDRA_USERNAME` - Username for authentication (optional)
-- `MCP_CORDRA_PASSWORD` - Password for authentication (optional)
-- `MCP_CORDRA_VERIFY_SSL` - SSL certificate verification (default: `true`)
-- `MCP_CORDRA_TIMEOUT` - Request timeout in seconds (default: `30`)
-- `MCP_CORDRA_MAX_SEARCH_RESULTS` - Maximum search results (default: `1000`)
+- `CORDRA_BASE_URL` - Cordra server URL (default: `https://localhost:8443`)
+- `CORDRA_USERNAME` - Username for authentication (optional)
+- `CORDRA_PASSWORD` - Password for authentication (optional)
+- `CORDRA_VERIFY_SSL` - SSL certificate verification (default: `true`)
+- `CORDRA_TIMEOUT` - Request timeout in seconds (default: `30`)
+- `CORDRA_MAX_SEARCH_RESULTS` - Maximum search results (default: `1000`)
 
 ## Usage
 
