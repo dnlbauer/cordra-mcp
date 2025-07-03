@@ -28,7 +28,9 @@ logger = logging.getLogger(__name__)
 @mcp.resource(
     "cordra://objects/{prefix}/{suffix}",
     name="cordra-object",
-    description="Retrieve a Cordra digital object by ID",
+    title="Retrieve Cordra Digital Object",
+    description="Retrieve a Digital Object and Metadata from Cordra by its ID/handle.",
+    mime_type="application/json",
 )
 async def get_cordra_object(prefix: str, suffix: str) -> str:
     """Retrieve a Cordra digital object by its ID.
@@ -96,7 +98,9 @@ async def register_schema_resources() -> None:
                     uri=f"cordra://schemas/{schema_name}",
                     fn=schema_fn,
                     name=f"cordra-type-schema-{schema_name}",
-                    description=f"JSON schema for Cordra type {schema_name}",
+                    title=f"Cordra Type Schema: {schema_name}",
+                    description=f"Retrieve the JSON schema for the Cordra Type {schema_name}",
+                    mime_type="application/json",
                 )
             )
 
