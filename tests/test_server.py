@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from cordra_mcp.client import CordraClientError, CordraNotFoundError, DigitalObject
-from cordra_mcp.server import get_cordra_object
+from cordra_mcp.server import get_cordra_object, search_objects
 
 
 @pytest.fixture
@@ -230,3 +230,153 @@ class TestSchemaResourceFunctions:
         await register_schema_resources()  # Should complete without raising
 
         mock_client.find.assert_called_once_with("type:Schema")
+
+
+class TestSearchObjects:
+    """Test the search_objects tool."""
+
+    @patch('cordra_mcp.server.cordra_client')
+    @patch('cordra_mcp.server.config')
+    async def test_search_objects_success(self, mock_config, mock_client):
+        """Test successful object search."""
+        mock_config.max_search_results = 1000
+        mock_results = [
+            {"id": "people/john-doe", "type": "Person", "content": {"name": "John Doe"}},
+            {"id": "people/jane-smith", "type": "Person", "content": {"name": "Jane Smith"}},
+        ]
+        mock_client.find = AsyncMock(return_value=mock_results)
+
+        result = await search_objects("name:John")
+
+        # Verify the result is valid JSON
+        parsed_result = json.loads(result)
+        assert len(parsed_result) == 2
+        assert parsed_result[0]["id"] == "people/john-doe"
+        assert parsed_result[1]["id"] == "people/jane-smith"
+
+        # Verify the client was called with correct parameters
+        mock_client.find.assert_called_once_with("name:John", object_type=None, limit=1000)
+
+    @patch('cordra_mcp.server.cordra_client')
+    @patch('cordra_mcp.server.config')
+    async def test_search_objects_with_type_filter(self, mock_config, mock_client):
+        """Test object search with type filter."""
+        mock_config.max_search_results = 1000
+        mock_results = [
+            {"id": "people/john-doe", "type": "Person", "content": {"name": "John Doe"}},
+        ]
+        mock_client.find = AsyncMock(return_value=mock_results)
+
+        result = await search_objects("name:John", type="Person")
+
+        # Verify the result is valid JSON
+        parsed_result = json.loads(result)
+        assert len(parsed_result) == 1
+        assert parsed_result[0]["type"] == "Person"
+
+        # Verify the client was called with type filter
+        mock_client.find.assert_called_once_with("name:John", object_type="Person", limit=1000)
+
+    @patch('cordra_mcp.server.cordra_client')
+    @patch('cordra_mcp.server.config')
+    async def test_search_objects_with_limit(self, mock_config, mock_client):
+        """Test object search with custom limit."""
+        mock_config.max_search_results = 1000
+        mock_results = [
+            {"id": "people/john-doe", "type": "Person", "content": {"name": "John Doe"}},
+        ]
+        mock_client.find = AsyncMock(return_value=mock_results)
+
+        result = await search_objects("name:John", limit=50)
+
+        # Verify the result is valid JSON
+        parsed_result = json.loads(result)
+        assert len(parsed_result) == 1
+
+        # Verify the client was called with custom limit
+        mock_client.find.assert_called_once_with("name:John", object_type=None, limit=50)
+
+    @patch('cordra_mcp.server.cordra_client')
+    @patch('cordra_mcp.server.config')
+    async def test_search_objects_with_all_parameters(self, mock_config, mock_client):
+        """Test object search with all parameters."""
+        mock_config.max_search_results = 1000
+        mock_results = [
+            {"id": "documents/report-123", "type": "Document", "content": {"title": "Report"}},
+        ]
+        mock_client.find = AsyncMock(return_value=mock_results)
+
+        result = await search_objects("title:Report", type="Document", limit=25)
+
+        # Verify the result is valid JSON
+        parsed_result = json.loads(result)
+        assert len(parsed_result) == 1
+        assert parsed_result[0]["type"] == "Document"
+
+        # Verify the client was called with all parameters
+        mock_client.find.assert_called_once_with("title:Report", object_type="Document", limit=25)
+
+    @patch('cordra_mcp.server.cordra_client')
+    @patch('cordra_mcp.server.config')
+    async def test_search_objects_empty_results(self, mock_config, mock_client):
+        """Test object search with no results."""
+        mock_config.max_search_results = 1000
+        mock_client.find = AsyncMock(return_value=[])
+
+        result = await search_objects("nonexistent:data")
+
+        # Verify the result is valid JSON with empty array
+        parsed_result = json.loads(result)
+        assert parsed_result == []
+
+        mock_client.find.assert_called_once_with("nonexistent:data", object_type=None, limit=1000)
+
+    @patch('cordra_mcp.server.cordra_client')
+    @patch('cordra_mcp.server.config')
+    async def test_search_objects_client_error(self, mock_config, mock_client):
+        """Test object search with client error."""
+        mock_config.max_search_results = 1000
+        mock_client.find = AsyncMock(side_effect=CordraClientError("Search failed"))
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await search_objects("test:query")
+
+        assert "Search failed:" in str(exc_info.value)
+        mock_client.find.assert_called_once_with("test:query", object_type=None, limit=1000)
+
+    @patch('cordra_mcp.server.cordra_client')
+    @patch('cordra_mcp.server.config')
+    async def test_search_objects_value_error(self, mock_config, mock_client):
+        """Test object search with value error."""
+        mock_config.max_search_results = 1000
+        mock_client.find = AsyncMock(side_effect=ValueError("Invalid query"))
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await search_objects("invalid:query")
+
+        assert "Invalid search parameters:" in str(exc_info.value)
+        mock_client.find.assert_called_once_with("invalid:query", object_type=None, limit=1000)
+
+    @patch('cordra_mcp.server.cordra_client')
+    @patch('cordra_mcp.server.config')
+    async def test_search_objects_json_formatting(self, mock_config, mock_client):
+        """Test that search results are properly formatted as JSON."""
+        mock_config.max_search_results = 1000
+        mock_results = [
+            {"id": "test/object", "type": "Test", "content": {"data": "value"}},
+        ]
+        mock_client.find = AsyncMock(return_value=mock_results)
+
+        result = await search_objects("test:query")
+
+        # Verify it's valid JSON with proper indentation
+        parsed_result = json.loads(result)
+        assert isinstance(parsed_result, list)
+
+        # Check that the result contains indentation (pretty-printed)
+        assert "  " in result  # Should have 2-space indentation
+
+        # Verify the content is correctly formatted
+        assert parsed_result[0]["id"] == "test/object"
+        assert parsed_result[0]["type"] == "Test"
+        assert parsed_result[0]["content"]["data"] == "value"

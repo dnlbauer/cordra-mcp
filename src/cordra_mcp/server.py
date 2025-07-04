@@ -25,6 +25,49 @@ cordra_client = CordraClient(config)
 logger = logging.getLogger(__name__)
 
 
+@mcp.tool(
+    name="search_objects",
+    title="Search Cordra Objects",
+    description="""Search for digital objects in the Cordra repository using Lucene/Solr query syntax.
+
+Examples:
+- /title:report - Find objects with 'report' in title
+- /author:smith - Find objects by author Smith
+- /name:John AND type:Person - Complex queries
+
+Returns a JSON list of matching objects with their full metadata."""
+)
+async def search_objects(
+    query: str,
+    type: str | None = None,
+    limit: int | None = None,
+) -> str:
+    """Search for digital objects in the Cordra repository.
+
+    Args:
+        query: The search query string (Lucene/Solr compatible). Examples:
+               - "/title:report" - Find objects with "report" in title
+               - "/author:smith" - Find objects by author Smith
+               - "/name:John AND type:Person" - Complex queries
+        type: Optional filter by object type (e.g., "Person", "Document", "Project")
+        limit: Optional limit on number of results (default: config max_search_results)
+
+    Returns:
+        JSON string containing list of matching objects with their full metadata
+    """
+    try:
+        effective_limit = limit if limit is not None else config.max_search_results
+        results = await cordra_client.find(query, object_type=type, limit=effective_limit)
+        return json.dumps(results, indent=2)
+
+    except ValueError as e:
+        raise RuntimeError(f"Invalid search parameters: {e}") from e
+    except CordraAuthenticationError as e:
+        raise RuntimeError(f"Authentication failed: {e}") from e
+    except CordraClientError as e:
+        raise RuntimeError(f"Search failed: {e}") from e
+
+
 @mcp.resource(
     "cordra://objects/{prefix}/{suffix}",
     name="cordra-object",

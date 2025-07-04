@@ -129,11 +129,13 @@ class CordraClient:
                 f"Failed to retrieve object {object_id}: {e}"
             ) from e
 
-    async def find(self, query: str) -> list[dict[str, Any]]:
+    async def find(self, query: str, object_type: str | None = None, limit: int | None = None) -> list[dict[str, Any]]:
         """Find objects using a Cordra query.
 
         Args:
             query: The query string to search for objects
+            object_type: Optional filter by object type
+            limit: Optional limit on number of results
 
         Returns:
             List of objects matching the query as dictionaries
@@ -143,15 +145,24 @@ class CordraClient:
             CordraAuthenticationError: If authentication fails
             CordraClientError: For other API errors
         """
+        # Construct the final query with type filter if specified
+        final_query = query
+        if object_type:
+            final_query = f"type:{object_type} AND ({query})"
+
         url = f"{self.config.base_url}/search"
-        params = {"query": query}
+        params = {"query": final_query}
+
+        # Add pageSize if limit is specified
+        if limit is not None:
+            params["pageSize"] = str(limit)
 
         try:
             response = self.session.get(url, params=params, timeout=self.config.timeout)
 
             if not response.ok:
                 self._handle_http_error(
-                    response, f"Failed to search with query '{query}'"
+                    response, f"Failed to search with query '{final_query}'"
                 )
 
             search_result = response.json()
@@ -164,7 +175,7 @@ class CordraClient:
 
         except requests.RequestException as e:
             raise CordraClientError(
-                f"Failed to search with query '{query}': {e}"
+                f"Failed to search with query '{final_query}': {e}"
             ) from e
 
     async def get_schema(self, schema_name: str) -> DigitalObject:

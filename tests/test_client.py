@@ -232,6 +232,70 @@ class TestCordraClient:
         assert "Failed to search with query 'invalid:query'" in str(exc_info.value)
         assert "Search failed" in str(exc_info.value)
 
+    @patch("cordra_mcp.client.requests.Session.get")
+    async def test_find_with_type_filter(self, mock_get, client):
+        """Test find operation with type filter constructs correct query."""
+        mock_response = mock_get.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"results": []}
+        mock_response.ok = True
+
+        await client.find("name:John", object_type="Person")
+
+        mock_get.assert_called_once_with(
+            "https://test.example.com/search",
+            params={"query": "type:Person AND (name:John)"},
+            timeout=30,
+        )
+
+    @patch("cordra_mcp.client.requests.Session.get")
+    async def test_find_with_limit(self, mock_get, client):
+        """Test find operation with limit adds pageSize parameter."""
+        mock_response = mock_get.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"results": []}
+        mock_response.ok = True
+
+        await client.find("type:Test", limit=50)
+
+        mock_get.assert_called_once_with(
+            "https://test.example.com/search",
+            params={"query": "type:Test", "pageSize": "50"},
+            timeout=30,
+        )
+
+    @patch("cordra_mcp.client.requests.Session.get")
+    async def test_find_with_type_and_limit(self, mock_get, client):
+        """Test find operation with both type filter and limit."""
+        mock_response = mock_get.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"results": []}
+        mock_response.ok = True
+
+        await client.find("title:Report", object_type="Document", limit=25)
+
+        mock_get.assert_called_once_with(
+            "https://test.example.com/search",
+            params={"query": "type:Document AND (title:Report)", "pageSize": "25"},
+            timeout=30,
+        )
+
+    @patch("cordra_mcp.client.requests.Session.get")
+    async def test_find_no_optional_params(self, mock_get, client):
+        """Test find operation with no optional parameters."""
+        mock_response = mock_get.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"results": []}
+        mock_response.ok = True
+
+        await client.find("content:test")
+
+        mock_get.assert_called_once_with(
+            "https://test.example.com/search",
+            params={"query": "content:test"},
+            timeout=30,
+        )
+
 
 class TestCordraConfig:
     """Test the CordraConfig class."""
