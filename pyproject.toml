@@ -6,14 +6,30 @@ authors = [
     {name = "Daniel Bauer", email = "github@dbauer.me"},
 ]
 readme = "README.md"
-license = "MIT"
+license = {text = "MIT"}
 requires-python = ">=3.11"
+keywords = ["cordra", "MCP", "agent-coding", "ai", "digital-repository", "model-context-protocol"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Database :: Database Engines/Servers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+
 dependencies = [
     "mcp[cli]>=1.2.0",
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "requests>=2.25.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/dnlbauer/cordra-mcp"
+Repository = "https://github.com/dnlbauer/cordra-mcp"
 
 [project.optional-dependencies]
 dev = [
