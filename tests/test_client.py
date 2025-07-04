@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 
 from cordra_mcp.client import (
+    CordraAuthenticationError,
     CordraClient,
     CordraClientError,
     CordraNotFoundError,
@@ -295,6 +296,71 @@ class TestCordraClient:
             params={"query": "content:test"},
             timeout=30,
         )
+
+    @patch("cordra_mcp.client.requests.Session.get")
+    async def test_get_design_success(self, mock_get, client):
+        """Test successful design object retrieval."""
+        mock_design_data = {
+            "type": "CordraDesign",
+            "content": {
+                "types": {"User": {}, "Project": {}},
+                "workflows": {},
+                "systemConfig": {"serverName": "test-cordra"}
+            },
+            "metadata": {"created": "2023-01-01", "modified": "2023-06-15"}
+        }
+        mock_response = mock_get.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_design_data
+        mock_response.ok = True
+
+        result = await client.get_design()
+
+        assert isinstance(result, DigitalObject)
+        assert result.id == "design"
+        assert result.type == "CordraDesign"
+        assert result.content["systemConfig"]["serverName"] == "test-cordra"
+
+        mock_get.assert_called_once_with(
+            "https://test.example.com/api/objects/design",
+            timeout=30,
+        )
+
+    @patch("cordra_mcp.client.requests.Session.get")
+    async def test_get_design_authentication_error(self, mock_get, client):
+        """Test design object retrieval with authentication error."""
+        mock_response = mock_get.return_value
+        mock_response.status_code = 403
+        mock_response.ok = False
+
+        with pytest.raises(CordraAuthenticationError) as exc_info:
+            await client.get_design()
+
+        assert "Authentication failed" in str(exc_info.value)
+
+    @patch("cordra_mcp.client.requests.Session.get")
+    async def test_get_design_not_found(self, mock_get, client):
+        """Test design object retrieval with not found error."""
+        mock_response = mock_get.return_value
+        mock_response.status_code = 404
+        mock_response.ok = False
+
+        with pytest.raises(CordraNotFoundError) as exc_info:
+            await client.get_design()
+
+        assert "Resource not found" in str(exc_info.value)
+
+    @patch("cordra_mcp.client.requests.Session.get")
+    async def test_get_design_request_error(self, mock_get, client):
+        """Test design object retrieval with request error."""
+        from requests import RequestException
+
+        mock_get.side_effect = RequestException("Connection failed")
+
+        with pytest.raises(CordraClientError) as exc_info:
+            await client.get_design()
+
+        assert "Failed to retrieve design object" in str(exc_info.value)
 
 
 class TestCordraConfig:

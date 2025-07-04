@@ -105,6 +105,39 @@ async def get_cordra_object(prefix: str, suffix: str) -> str:
         raise RuntimeError(f"Failed to retrieve object {object_id}: {e}") from e
 
 
+@mcp.resource(
+    "cordra://design",
+    name="cordra-design",
+    title="Retrieve Cordra Design Object",
+    description="Retrieve the Cordra design object containing repository configuration. Administrative privileges are typically required to access this object.",
+    mime_type="application/json",
+)
+async def get_cordra_design() -> str:
+    """Retrieve the Cordra design object containing repository configuration.
+
+    The design object is the central location where Cordra stores its configuration,
+    including type definitions, workflow configurations, and system settings.
+    Administrative privileges are typically required to access this object.
+
+    Returns:
+        JSON representation of the design object
+
+    Raises:
+        RuntimeError: If the design object is not found, authentication fails, or there's an API error
+    """
+    try:
+        design_object = await cordra_client.get_design()
+        object_dict = design_object.model_dump()
+        return json.dumps(object_dict, indent=2)
+
+    except CordraNotFoundError as e:
+        raise RuntimeError("Design object not found") from e
+    except CordraAuthenticationError as e:
+        raise RuntimeError(f"Authentication failed: {e}") from e
+    except CordraClientError as e:
+        raise RuntimeError(f"Failed to retrieve design object: {e}") from e
+
+
 async def create_schema_resource(schema_name: str) -> str:
     """Create content for a specific schema resource."""
     try:

@@ -213,3 +213,44 @@ class CordraClient:
             raise CordraClientError(
                 f"Failed to retrieve schema '{schema_name}': {e}"
             ) from e
+
+    async def get_design(self) -> DigitalObject:
+        """Retrieve the Cordra design object containing repository configuration.
+
+        The design object contains the central configuration for the Cordra repository
+        including type definitions, workflow configurations, and system settings.
+        Administrative privileges are typically required to access this object.
+
+        Returns:
+            The design object as a DigitalObject
+
+        Raises:
+            CordraNotFoundError: If the design object is not found
+            CordraAuthenticationError: If authentication fails or insufficient privileges
+            CordraClientError: For other API errors
+        """
+        url = f"{self.config.base_url}/api/objects/design"
+
+        try:
+            response = self.session.get(url, timeout=self.config.timeout)
+
+            if not response.ok:
+                self._handle_http_error(
+                    response, "Failed to retrieve design object"
+                )
+
+            design_obj = response.json()
+
+            return DigitalObject(
+                id="design",
+                type=design_obj.get("type", "CordraDesign"),
+                content=design_obj.get("content", design_obj),
+                metadata=design_obj.get("metadata"),
+                acl=design_obj.get("acl"),
+                payloads=design_obj.get("payloads"),
+            )
+
+        except requests.RequestException as e:
+            raise CordraClientError(
+                f"Failed to retrieve design object: {e}"
+            ) from e

@@ -5,8 +5,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from cordra_mcp.client import CordraClientError, CordraNotFoundError, DigitalObject
-from cordra_mcp.server import get_cordra_object, search_objects
+from cordra_mcp.client import (
+    CordraAuthenticationError,
+    CordraClientError,
+    CordraNotFoundError,
+    DigitalObject,
+)
+from cordra_mcp.server import get_cordra_design, get_cordra_object, search_objects
 
 
 @pytest.fixture
@@ -380,3 +385,101 @@ class TestSearchObjects:
         assert parsed_result[0]["id"] == "test/object"
         assert parsed_result[0]["type"] == "Test"
         assert parsed_result[0]["content"]["data"] == "value"
+
+
+class TestGetCordraDesign:
+    """Test the get_cordra_design resource handler."""
+
+    @patch('cordra_mcp.server.cordra_client')
+    async def test_get_design_success(self, mock_client):
+        """Test successful design object retrieval."""
+        mock_design = DigitalObject(
+            id="design",
+            type="CordraDesign",
+            content={
+                "types": {"User": {}, "Project": {}},
+                "workflows": {},
+                "systemConfig": {"serverName": "test-cordra"}
+            },
+            metadata={"created": "2023-01-01", "modified": "2023-06-15"}
+        )
+        mock_client.get_design = AsyncMock(return_value=mock_design)
+
+        result = await get_cordra_design()
+
+        # Verify the result is valid JSON
+        parsed_result = json.loads(result)
+        assert parsed_result["id"] == "design"
+        assert parsed_result["type"] == "CordraDesign"
+        assert parsed_result["content"]["systemConfig"]["serverName"] == "test-cordra"
+        assert "types" in parsed_result["content"]
+        assert "workflows" in parsed_result["content"]
+
+        # Verify the client was called
+        mock_client.get_design.assert_called_once()
+
+    @patch('cordra_mcp.server.cordra_client')
+    async def test_get_design_not_found(self, mock_client):
+        """Test design object not found exception."""
+        mock_client.get_design = AsyncMock(
+            side_effect=CordraNotFoundError("Design object not found")
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await get_cordra_design()
+
+        assert "Design object not found" in str(exc_info.value)
+        mock_client.get_design.assert_called_once()
+
+    @patch('cordra_mcp.server.cordra_client')
+    async def test_get_design_authentication_error(self, mock_client):
+        """Test design object authentication error."""
+        mock_client.get_design = AsyncMock(
+            side_effect=CordraAuthenticationError("Authentication failed")
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await get_cordra_design()
+
+        assert "Authentication failed" in str(exc_info.value)
+        mock_client.get_design.assert_called_once()
+
+    @patch('cordra_mcp.server.cordra_client')
+    async def test_get_design_client_error(self, mock_client):
+        """Test design object general client error."""
+        mock_client.get_design = AsyncMock(
+            side_effect=CordraClientError("Connection failed")
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await get_cordra_design()
+
+        assert "Failed to retrieve design object" in str(exc_info.value)
+        assert "Connection failed" in str(exc_info.value)
+        mock_client.get_design.assert_called_once()
+
+    @patch('cordra_mcp.server.cordra_client')
+    async def test_get_design_json_formatting(self, mock_client):
+        """Test that the design object is properly formatted as JSON."""
+        mock_design = DigitalObject(
+            id="design",
+            type="CordraDesign",
+            content={"data": "value"},
+            metadata={"created": "2023-01-01"}
+        )
+        mock_client.get_design = AsyncMock(return_value=mock_design)
+
+        result = await get_cordra_design()
+
+        # Verify it's valid JSON with proper indentation
+        parsed_result = json.loads(result)
+        assert isinstance(parsed_result, dict)
+
+        # Check that the result contains indentation (pretty-printed)
+        assert "  " in result  # Should have 2-space indentation
+
+        # Verify all expected fields are present
+        assert "id" in parsed_result
+        assert "type" in parsed_result
+        assert "content" in parsed_result
+        assert "metadata" in parsed_result
