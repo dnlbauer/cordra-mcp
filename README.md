@@ -44,3 +44,31 @@ Run the MCP server:
 ```bash
 uv run mcp-cordra
 ```
+
+### Claude Code
+
+You can add this MCP to Claude Code by registering it in the settings
+of your project or creating a `.mcp.json` file in your workdir:
+
+Example using the docker build:
+
+```json
+{
+  "mcpServers": {
+    "cordra": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "CORDRA_BASE_URL",
+        "ghcr.io/dnlbauer/cordra-mcp:latest"
+      ],
+      "env": {
+        "CORDRA_BASE_URL": "https://cordra.example.de"
+      }
+    }
+  }
+}
+```
