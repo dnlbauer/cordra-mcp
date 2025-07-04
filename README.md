@@ -20,10 +20,11 @@ ensuring safe exploration without risk of data modification or corruption.
 
 - `cordra://objects/{prefix}/{suffix}` - Retrieve a specific object by its handle identifier
 - `cordra://schemas/{schema_name}` - Schema definition for a specific type.
+- `cordra://design` - Design document containing the overall structure and configuration of the Cordra repository.
 
 ### Tools
 
-Currently, none.
+- `search_objects` - Search for digital objects using a query string.
 
 ## Configuration
 
