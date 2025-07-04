@@ -72,3 +72,21 @@ Example using the docker build:
   }
 }
 ```
+
+Example using the python package with `uvx`:
+
+```json
+{
+  "mcpServers": {
+    "cordra": {
+      "command": "uvx",
+      "args": [
+        "cordra-mcp"
+      ],
+      "env": {
+        "CORDRA_BASE_URL": "https://cordra.example.de"
+      }
+    }
+  }
+}
+```
