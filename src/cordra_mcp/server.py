@@ -37,7 +37,7 @@ Examples:
 
 Pagination:
 - Results are paginated with 0-based page numbering
-- Use 'limit' to control page size (default: 20)
+- Use 'limit' to control page size (default: 1)
 - Use 'page_num' to specify which page to retrieve (default: 0)
 
 Returns a JSON list of matching objects with their full metadata."""
@@ -45,7 +45,7 @@ Returns a JSON list of matching objects with their full metadata."""
 async def search_objects(
     query: str,
     type: str | None = None,
-    limit: int | None = None,
+    limit: int = 1,
     page_num: int = 0,
 ) -> str:
     """Search for digital objects in the Cordra repository with pagination support.
@@ -56,16 +56,14 @@ async def search_objects(
                - "/author:smith" - Find objects by author Smith
                - "/name:John AND type:Person" - Complex queries
         type: Optional filter by object type (e.g., "Person", "Document", "Project")
-        limit: Optional page size - number of results per page (default: 20)
+        limit: Page size - number of results per page (default: 1)
         page_num: Page number to retrieve, 0-based (default: 0 for first page)
 
     Returns:
         JSON string containing list of matching objects with their full metadata
     """
     try:
-        # Use provided limit or default page size of 20
-        page_size = limit if limit is not None else 20
-        search_result = await cordra_client.find(query, object_type=type, page_size=page_size, page_num=page_num)
+        search_result = await cordra_client.find(query, object_type=type, page_size=limit, page_num=page_num)
         results = search_result["results"]
         return json.dumps(results, indent=2)
 

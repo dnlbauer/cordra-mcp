@@ -311,7 +311,7 @@ class TestSearchObjects:
         assert parsed_result[1]["id"] == "people/jane-smith"
 
         # Verify the client was called with correct parameters
-        mock_client.find.assert_called_once_with("name:John", object_type=None, page_size=20, page_num=0)
+        mock_client.find.assert_called_once_with("name:John", object_type=None, page_size=1, page_num=0)
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_with_type_filter(self, mock_client):
@@ -334,7 +334,7 @@ class TestSearchObjects:
         assert parsed_result[0]["type"] == "Person"
 
         # Verify the client was called with type filter
-        mock_client.find.assert_called_once_with("name:John", object_type="Person", page_size=20, page_num=0)
+        mock_client.find.assert_called_once_with("name:John", object_type="Person", page_size=1, page_num=0)
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_with_limit(self, mock_client):
@@ -398,7 +398,7 @@ class TestSearchObjects:
         parsed_result = json.loads(result)
         assert parsed_result == []
 
-        mock_client.find.assert_called_once_with("nonexistent:data", object_type=None, page_size=20, page_num=0)
+        mock_client.find.assert_called_once_with("nonexistent:data", object_type=None, page_size=1, page_num=0)
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_client_error(self, mock_client):
@@ -409,7 +409,7 @@ class TestSearchObjects:
             await search_objects("test:query")
 
         assert "Search failed:" in str(exc_info.value)
-        mock_client.find.assert_called_once_with("test:query", object_type=None, page_size=20, page_num=0)
+        mock_client.find.assert_called_once_with("test:query", object_type=None, page_size=1, page_num=0)
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_value_error(self, mock_client):
@@ -420,7 +420,7 @@ class TestSearchObjects:
             await search_objects("invalid:query")
 
         assert "Invalid search parameters:" in str(exc_info.value)
-        mock_client.find.assert_called_once_with("invalid:query", object_type=None, page_size=20, page_num=0)
+        mock_client.find.assert_called_once_with("invalid:query", object_type=None, page_size=1, page_num=0)
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_json_formatting(self, mock_client):
@@ -463,9 +463,9 @@ class TestSearchObjects:
         mock_client.find = AsyncMock(return_value=mock_search_result)
 
         await search_objects("type:Document", page_num=1)
-        
+
         # Verify the client was called with correct page number
-        mock_client.find.assert_called_once_with("type:Document", object_type=None, page_size=20, page_num=1)
+        mock_client.find.assert_called_once_with("type:Document", object_type=None, page_size=1, page_num=1)
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_with_all_pagination_params(self, mock_client):
