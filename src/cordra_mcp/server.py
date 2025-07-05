@@ -57,7 +57,8 @@ async def search_objects(
     """
     try:
         effective_limit = limit if limit is not None else config.max_search_results
-        results = await cordra_client.find(query, object_type=type, limit=effective_limit)
+        search_result = await cordra_client.find(query, object_type=type, page_size=effective_limit)
+        results = search_result["results"]
         return json.dumps(results, indent=2)
 
     except ValueError as e:
@@ -155,10 +156,23 @@ async def create_schema_resource(schema_name: str) -> str:
 async def register_schema_resources() -> None:
     """Register individual schema resources dynamically."""
     try:
-        # Get all available schemas
-        schemas = await cordra_client.find("type:Schema")
+        # Get all available schemas using pagination
+        all_schemas = []
+        page_num = 0
+        page_size = 20
 
-        for schema in schemas:
+        while True:
+            search_result = await cordra_client.find("type:Schema", page_size=page_size, page_num=page_num)
+            schemas = search_result["results"]
+            all_schemas.extend(schemas)
+
+            # Check if we've retrieved all schemas
+            if len(schemas) < page_size:
+                break
+
+            page_num += 1
+
+        for schema in all_schemas:
             schema_name = schema.get("content", {}).get("name")
             if not schema_name:
                 logger.warning("Schema without a name found, skipping.")
@@ -180,7 +194,7 @@ async def register_schema_resources() -> None:
                 )
             )
 
-        logger.info(f"Registered {len(schemas)} schema resources")
+        logger.info(f"Registered {len(all_schemas)} schema resources")
 
     except Exception as e:
         logger.warning(f"Failed to register schema resources: {e}")

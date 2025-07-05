@@ -190,12 +190,17 @@ class TestSchemaResourceFunctions:
     @patch('cordra_mcp.server.cordra_client')
     async def test_register_schema_resources_success(self, mock_client):
         """Test successful schema resource registration."""
-        mock_schemas = [
-            {"content": {"name": "User"}, "id": "test/user-schema"},
-            {"content": {"name": "Project"}, "id": "test/project-schema"},
-            {"content": {"name": "Document"}, "id": "test/doc-schema"}
-        ]
-        mock_client.find = AsyncMock(return_value=mock_schemas)
+        mock_search_result = {
+            "results": [
+                {"content": {"name": "User"}, "id": "test/user-schema"},
+                {"content": {"name": "Project"}, "id": "test/project-schema"},
+                {"content": {"name": "Document"}, "id": "test/doc-schema"}
+            ],
+            "total_size": 3,
+            "page_num": 0,
+            "page_size": 20
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
 
         # Mock the mcp.add_resource method
         with patch('cordra_mcp.server.mcp') as mock_mcp:
@@ -203,7 +208,7 @@ class TestSchemaResourceFunctions:
             await register_schema_resources()
 
         # Verify the client was called with correct query
-        mock_client.find.assert_called_once_with("type:Schema")
+        mock_client.find.assert_called_once_with("type:Schema", page_size=20, page_num=0)
 
         # Verify add_resource was called for each schema
         assert mock_mcp.add_resource.call_count == 3
@@ -211,12 +216,17 @@ class TestSchemaResourceFunctions:
     @patch('cordra_mcp.server.cordra_client')
     async def test_register_schema_resources_missing_name(self, mock_client):
         """Test schema resource registration with objects missing name field."""
-        mock_schemas = [
-            {"content": {"name": "User"}, "id": "test/user-schema"},
-            {"content": {}, "id": "test/no-name-schema"},  # Missing name field
-            {"content": {"name": "Project"}, "id": "test/project-schema"}
-        ]
-        mock_client.find = AsyncMock(return_value=mock_schemas)
+        mock_search_result = {
+            "results": [
+                {"content": {"name": "User"}, "id": "test/user-schema"},
+                {"content": {}, "id": "test/no-name-schema"},  # Missing name field
+                {"content": {"name": "Project"}, "id": "test/project-schema"}
+            ],
+            "total_size": 3,
+            "page_num": 0,
+            "page_size": 20
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
 
         with patch('cordra_mcp.server.mcp') as mock_mcp:
             from cordra_mcp.server import register_schema_resources
@@ -234,7 +244,45 @@ class TestSchemaResourceFunctions:
         from cordra_mcp.server import register_schema_resources
         await register_schema_resources()  # Should complete without raising
 
-        mock_client.find.assert_called_once_with("type:Schema")
+        mock_client.find.assert_called_once_with("type:Schema", page_size=20, page_num=0)
+
+    @patch('cordra_mcp.server.cordra_client')
+    async def test_register_schema_resources_pagination(self, mock_client):
+        """Test schema resource registration with pagination."""
+        # Mock multiple pages of results
+        # First page with full 20 results (simulating more schemas)
+        first_page_schemas = [{"content": {"name": f"Schema{i}"}, "id": f"test/schema{i}"} for i in range(20)]
+        first_page = {
+            "results": first_page_schemas,
+            "total_size": 25,
+            "page_num": 0,
+            "page_size": 20
+        }
+
+        # Second page with fewer results (indicating last page)
+        second_page = {
+            "results": [
+                {"content": {"name": "Document"}, "id": "test/doc-schema"},
+            ],
+            "total_size": 25,
+            "page_num": 1,
+            "page_size": 20
+        }
+
+        # Return first page, then second page (with fewer results indicating last page)
+        mock_client.find = AsyncMock(side_effect=[first_page, second_page])
+
+        with patch('cordra_mcp.server.mcp') as mock_mcp:
+            from cordra_mcp.server import register_schema_resources
+            await register_schema_resources()
+
+        # Verify pagination calls
+        assert mock_client.find.call_count == 2
+        mock_client.find.assert_any_call("type:Schema", page_size=20, page_num=0)
+        mock_client.find.assert_any_call("type:Schema", page_size=20, page_num=1)
+
+        # Verify all 21 schemas were registered (20 from first page + 1 from second page)
+        assert mock_mcp.add_resource.call_count == 21
 
 
 class TestSearchObjects:
@@ -245,11 +293,16 @@ class TestSearchObjects:
     async def test_search_objects_success(self, mock_config, mock_client):
         """Test successful object search."""
         mock_config.max_search_results = 1000
-        mock_results = [
-            {"id": "people/john-doe", "type": "Person", "content": {"name": "John Doe"}},
-            {"id": "people/jane-smith", "type": "Person", "content": {"name": "Jane Smith"}},
-        ]
-        mock_client.find = AsyncMock(return_value=mock_results)
+        mock_search_result = {
+            "results": [
+                {"id": "people/john-doe", "type": "Person", "content": {"name": "John Doe"}},
+                {"id": "people/jane-smith", "type": "Person", "content": {"name": "Jane Smith"}},
+            ],
+            "total_size": 2,
+            "page_num": 0,
+            "page_size": 1000
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
 
         result = await search_objects("name:John")
 
@@ -260,17 +313,22 @@ class TestSearchObjects:
         assert parsed_result[1]["id"] == "people/jane-smith"
 
         # Verify the client was called with correct parameters
-        mock_client.find.assert_called_once_with("name:John", object_type=None, limit=1000)
+        mock_client.find.assert_called_once_with("name:John", object_type=None, page_size=1000)
 
     @patch('cordra_mcp.server.cordra_client')
     @patch('cordra_mcp.server.config')
     async def test_search_objects_with_type_filter(self, mock_config, mock_client):
         """Test object search with type filter."""
         mock_config.max_search_results = 1000
-        mock_results = [
-            {"id": "people/john-doe", "type": "Person", "content": {"name": "John Doe"}},
-        ]
-        mock_client.find = AsyncMock(return_value=mock_results)
+        mock_search_result = {
+            "results": [
+                {"id": "people/john-doe", "type": "Person", "content": {"name": "John Doe"}},
+            ],
+            "total_size": 1,
+            "page_num": 0,
+            "page_size": 1000
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
 
         result = await search_objects("name:John", type="Person")
 
@@ -280,17 +338,22 @@ class TestSearchObjects:
         assert parsed_result[0]["type"] == "Person"
 
         # Verify the client was called with type filter
-        mock_client.find.assert_called_once_with("name:John", object_type="Person", limit=1000)
+        mock_client.find.assert_called_once_with("name:John", object_type="Person", page_size=1000)
 
     @patch('cordra_mcp.server.cordra_client')
     @patch('cordra_mcp.server.config')
     async def test_search_objects_with_limit(self, mock_config, mock_client):
         """Test object search with custom limit."""
         mock_config.max_search_results = 1000
-        mock_results = [
-            {"id": "people/john-doe", "type": "Person", "content": {"name": "John Doe"}},
-        ]
-        mock_client.find = AsyncMock(return_value=mock_results)
+        mock_search_result = {
+            "results": [
+                {"id": "people/john-doe", "type": "Person", "content": {"name": "John Doe"}},
+            ],
+            "total_size": 1,
+            "page_num": 0,
+            "page_size": 50
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
 
         result = await search_objects("name:John", limit=50)
 
@@ -299,17 +362,22 @@ class TestSearchObjects:
         assert len(parsed_result) == 1
 
         # Verify the client was called with custom limit
-        mock_client.find.assert_called_once_with("name:John", object_type=None, limit=50)
+        mock_client.find.assert_called_once_with("name:John", object_type=None, page_size=50)
 
     @patch('cordra_mcp.server.cordra_client')
     @patch('cordra_mcp.server.config')
     async def test_search_objects_with_all_parameters(self, mock_config, mock_client):
         """Test object search with all parameters."""
         mock_config.max_search_results = 1000
-        mock_results = [
-            {"id": "documents/report-123", "type": "Document", "content": {"title": "Report"}},
-        ]
-        mock_client.find = AsyncMock(return_value=mock_results)
+        mock_search_result = {
+            "results": [
+                {"id": "documents/report-123", "type": "Document", "content": {"title": "Report"}},
+            ],
+            "total_size": 1,
+            "page_num": 0,
+            "page_size": 25
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
 
         result = await search_objects("title:Report", type="Document", limit=25)
 
@@ -319,14 +387,20 @@ class TestSearchObjects:
         assert parsed_result[0]["type"] == "Document"
 
         # Verify the client was called with all parameters
-        mock_client.find.assert_called_once_with("title:Report", object_type="Document", limit=25)
+        mock_client.find.assert_called_once_with("title:Report", object_type="Document", page_size=25)
 
     @patch('cordra_mcp.server.cordra_client')
     @patch('cordra_mcp.server.config')
     async def test_search_objects_empty_results(self, mock_config, mock_client):
         """Test object search with no results."""
         mock_config.max_search_results = 1000
-        mock_client.find = AsyncMock(return_value=[])
+        mock_search_result = {
+            "results": [],
+            "total_size": 0,
+            "page_num": 0,
+            "page_size": 1000
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
 
         result = await search_objects("nonexistent:data")
 
@@ -334,7 +408,7 @@ class TestSearchObjects:
         parsed_result = json.loads(result)
         assert parsed_result == []
 
-        mock_client.find.assert_called_once_with("nonexistent:data", object_type=None, limit=1000)
+        mock_client.find.assert_called_once_with("nonexistent:data", object_type=None, page_size=1000)
 
     @patch('cordra_mcp.server.cordra_client')
     @patch('cordra_mcp.server.config')
@@ -347,7 +421,7 @@ class TestSearchObjects:
             await search_objects("test:query")
 
         assert "Search failed:" in str(exc_info.value)
-        mock_client.find.assert_called_once_with("test:query", object_type=None, limit=1000)
+        mock_client.find.assert_called_once_with("test:query", object_type=None, page_size=1000)
 
     @patch('cordra_mcp.server.cordra_client')
     @patch('cordra_mcp.server.config')
@@ -360,17 +434,22 @@ class TestSearchObjects:
             await search_objects("invalid:query")
 
         assert "Invalid search parameters:" in str(exc_info.value)
-        mock_client.find.assert_called_once_with("invalid:query", object_type=None, limit=1000)
+        mock_client.find.assert_called_once_with("invalid:query", object_type=None, page_size=1000)
 
     @patch('cordra_mcp.server.cordra_client')
     @patch('cordra_mcp.server.config')
     async def test_search_objects_json_formatting(self, mock_config, mock_client):
         """Test that search results are properly formatted as JSON."""
         mock_config.max_search_results = 1000
-        mock_results = [
-            {"id": "test/object", "type": "Test", "content": {"data": "value"}},
-        ]
-        mock_client.find = AsyncMock(return_value=mock_results)
+        mock_search_result = {
+            "results": [
+                {"id": "test/object", "type": "Test", "content": {"data": "value"}},
+            ],
+            "total_size": 1,
+            "page_num": 0,
+            "page_size": 1000
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
 
         result = await search_objects("test:query")
 

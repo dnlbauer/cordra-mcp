@@ -129,16 +129,21 @@ class CordraClient:
                 f"Failed to retrieve object {object_id}: {e}"
             ) from e
 
-    async def find(self, query: str, object_type: str | None = None, limit: int | None = None) -> list[dict[str, Any]]:
-        """Find objects using a Cordra query.
+    async def find(self, query: str, object_type: str | None = None, page_size: int = 20, page_num: int = 0) -> dict[str, Any]:
+        """Find objects using a Cordra query with pagination support.
 
         Args:
             query: The query string to search for objects
             object_type: Optional filter by object type
-            limit: Optional limit on number of results
+            page_size: Number of results per page (if None, no limit)
+            page_num: Page number to retrieve (0-based, default: 0)
 
         Returns:
-            List of objects matching the query as dictionaries
+            Dict containing:
+            - results: List of objects matching the query as dictionaries
+            - total_size: Total number of results available
+            - page_num: Current page number
+            - page_size: Number of results per page
 
         Raises:
             ValueError: If query is empty
@@ -151,11 +156,11 @@ class CordraClient:
             final_query = f"type:{object_type} AND ({query})"
 
         url = f"{self.config.base_url}/search"
-        params = {"query": final_query}
-
-        # Add pageSize if limit is specified
-        if limit is not None:
-            params["pageSize"] = str(limit)
+        params = {
+            "query": final_query,
+            "pageSize": str(page_size),
+            "pageNum": str(page_num),
+        }
 
         try:
             response = self.session.get(url, params=params, timeout=self.config.timeout)
@@ -167,11 +172,12 @@ class CordraClient:
 
             search_result = response.json()
 
-            # Extract the results array from the response
-            if isinstance(search_result, dict) and "results" in search_result:
-                return search_result["results"]  # type: ignore
-            else:
-                return []
+            return {
+                "results": search_result["results"],
+                "total_size": search_result["size"],
+                "page_num": search_result["pageNum"],
+                "page_size": search_result["pageSize"]
+            }
 
         except requests.RequestException as e:
             raise CordraClientError(
@@ -196,7 +202,8 @@ class CordraClient:
         query = f"type:Schema AND /name:{schema_name}"
 
         try:
-            schemas = await self.find(query)
+            search_result = await self.find(query)
+            schemas = search_result["results"]
 
             if not schemas:
                 raise CordraNotFoundError(f"Schema '{schema_name}' not found")

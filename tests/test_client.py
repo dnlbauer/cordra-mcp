@@ -170,6 +170,8 @@ class TestCordraClient:
                 {"name": "Document", "identifier": "test/doc-schema"},
             ],
             "size": 3,
+            "pageNum": 0,
+            "pageSize": 20,
         }
         mock_response = mock_get.return_value
         mock_response.status_code = 200
@@ -178,21 +180,25 @@ class TestCordraClient:
 
         result = await client.find("type:Schema")
 
-        assert len(result) == 3
-        assert result[0]["name"] == "User"
-        assert result[1]["name"] == "Project"
-        assert result[2]["name"] == "Document"
+        assert isinstance(result, dict)
+        assert len(result["results"]) == 3
+        assert result["results"][0]["name"] == "User"
+        assert result["results"][1]["name"] == "Project"
+        assert result["results"][2]["name"] == "Document"
+        assert result["total_size"] == 3
+        assert result["page_num"] == 0
+        assert result["page_size"] == 20
 
         mock_get.assert_called_once_with(
             "https://test.example.com/search",
-            params={"query": "type:Schema"},
+            params={"query": "type:Schema", "pageSize": "20", "pageNum": "0"},
             timeout=30,
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
     async def test_find_empty_results(self, mock_get, client):
         """Test find with empty results."""
-        mock_response_data = {"results": [], "size": 0}
+        mock_response_data = {"results": [], "size": 0, "pageNum": 0, "pageSize": 20}
         mock_response = mock_get.return_value
         mock_response.status_code = 200
         mock_response.json.return_value = mock_response_data
@@ -200,25 +206,16 @@ class TestCordraClient:
 
         result = await client.find("type:NonExistent")
 
-        assert result == []
+        assert isinstance(result, dict)
+        assert result["results"] == []
+        assert result["total_size"] == 0
+        assert result["page_num"] == 0
+        assert result["page_size"] == 20
         mock_get.assert_called_once_with(
             "https://test.example.com/search",
-            params={"query": "type:NonExistent"},
+            params={"query": "type:NonExistent", "pageSize": "20", "pageNum": "0"},
             timeout=30,
         )
-
-    @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_no_results_key(self, mock_get, client):
-        """Test find with response missing results key."""
-        mock_response_data = {"size": 0}  # No results key
-        mock_response = mock_get.return_value
-        mock_response.status_code = 200
-        mock_response.json.return_value = mock_response_data
-        mock_response.raise_for_status.return_value = None
-
-        result = await client.find("type:Schema")
-
-        assert result == []
 
     @patch("cordra_mcp.client.requests.Session.get")
     async def test_find_error(self, mock_get, client):
@@ -236,64 +233,108 @@ class TestCordraClient:
     @patch("cordra_mcp.client.requests.Session.get")
     async def test_find_with_type_filter(self, mock_get, client):
         """Test find operation with type filter constructs correct query."""
+        mock_response_data = {"results": [], "size": 0, "pageNum": 0, "pageSize": 20}
         mock_response = mock_get.return_value
         mock_response.status_code = 200
-        mock_response.json.return_value = {"results": []}
+        mock_response.json.return_value = mock_response_data
         mock_response.ok = True
 
         await client.find("name:John", object_type="Person")
 
         mock_get.assert_called_once_with(
             "https://test.example.com/search",
-            params={"query": "type:Person AND (name:John)"},
+            params={"query": "type:Person AND (name:John)", "pageSize": "20", "pageNum": "0"},
             timeout=30,
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_with_limit(self, mock_get, client):
-        """Test find operation with limit adds pageSize parameter."""
+    async def test_find_with_page_size(self, mock_get, client):
+        """Test find operation with custom page size."""
+        mock_response_data = {"results": [], "size": 0, "pageNum": 0, "pageSize": 50}
         mock_response = mock_get.return_value
         mock_response.status_code = 200
-        mock_response.json.return_value = {"results": []}
+        mock_response.json.return_value = mock_response_data
         mock_response.ok = True
 
-        await client.find("type:Test", limit=50)
+        await client.find("type:Test", page_size=50)
 
         mock_get.assert_called_once_with(
             "https://test.example.com/search",
-            params={"query": "type:Test", "pageSize": "50"},
+            params={"query": "type:Test", "pageSize": "50", "pageNum": "0"},
             timeout=30,
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_with_type_and_limit(self, mock_get, client):
-        """Test find operation with both type filter and limit."""
+    async def test_find_with_type_and_page_size(self, mock_get, client):
+        """Test find operation with both type filter and page size."""
+        mock_response_data = {"results": [], "size": 0, "pageNum": 0, "pageSize": 25}
         mock_response = mock_get.return_value
         mock_response.status_code = 200
-        mock_response.json.return_value = {"results": []}
+        mock_response.json.return_value = mock_response_data
         mock_response.ok = True
 
-        await client.find("title:Report", object_type="Document", limit=25)
+        await client.find("title:Report", object_type="Document", page_size=25)
 
         mock_get.assert_called_once_with(
             "https://test.example.com/search",
-            params={"query": "type:Document AND (title:Report)", "pageSize": "25"},
+            params={"query": "type:Document AND (title:Report)", "pageSize": "25", "pageNum": "0"},
             timeout=30,
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_no_optional_params(self, mock_get, client):
-        """Test find operation with no optional parameters."""
+    async def test_find_default_params(self, mock_get, client):
+        """Test find operation with default parameters."""
+        mock_response_data = {"results": [], "size": 0, "pageNum": 0, "pageSize": 20}
         mock_response = mock_get.return_value
         mock_response.status_code = 200
-        mock_response.json.return_value = {"results": []}
+        mock_response.json.return_value = mock_response_data
         mock_response.ok = True
 
         await client.find("content:test")
 
         mock_get.assert_called_once_with(
             "https://test.example.com/search",
-            params={"query": "content:test"},
+            params={"query": "content:test", "pageSize": "20", "pageNum": "0"},
+            timeout=30,
+        )
+
+    @patch("cordra_mcp.client.requests.Session.get")
+    async def test_find_with_page_num(self, mock_get, client):
+        """Test find operation with specific page number."""
+        mock_response_data = {"results": [], "size": 100, "pageNum": 2, "pageSize": 20}
+        mock_response = mock_get.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_response_data
+        mock_response.ok = True
+
+        result = await client.find("type:Schema", page_num=2)
+
+        assert result["page_num"] == 2
+        assert result["page_size"] == 20
+        assert result["total_size"] == 100
+        mock_get.assert_called_once_with(
+            "https://test.example.com/search",
+            params={"query": "type:Schema", "pageSize": "20", "pageNum": "2"},
+            timeout=30,
+        )
+
+    @patch("cordra_mcp.client.requests.Session.get")
+    async def test_find_with_custom_page_size_and_num(self, mock_get, client):
+        """Test find operation with custom page size and page number."""
+        mock_response_data = {"results": [], "size": 500, "pageNum": 5, "pageSize": 10}
+        mock_response = mock_get.return_value
+        mock_response.status_code = 200
+        mock_response.json.return_value = mock_response_data
+        mock_response.ok = True
+
+        result = await client.find("type:Document", page_size=10, page_num=5)
+
+        assert result["page_num"] == 5
+        assert result["page_size"] == 10
+        assert result["total_size"] == 500
+        mock_get.assert_called_once_with(
+            "https://test.example.com/search",
+            params={"query": "type:Document", "pageSize": "10", "pageNum": "5"},
             timeout=30,
         )
 
