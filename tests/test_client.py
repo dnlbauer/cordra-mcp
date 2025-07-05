@@ -413,6 +413,5 @@ class TestCordraConfig:
         assert config.base_url == "https://localhost:8443"
         assert config.username is None
         assert config.password is None
-        assert config.max_search_results == 1000
         assert config.verify_ssl is True
         assert config.timeout == 30

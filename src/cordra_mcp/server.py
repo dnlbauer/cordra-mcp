@@ -56,8 +56,9 @@ async def search_objects(
         JSON string containing list of matching objects with their full metadata
     """
     try:
-        effective_limit = limit if limit is not None else config.max_search_results
-        search_result = await cordra_client.find(query, object_type=type, page_size=effective_limit)
+        # Use provided limit or default page size of 20
+        page_size = limit if limit is not None else 20
+        search_result = await cordra_client.find(query, object_type=type, page_size=page_size)
         results = search_result["results"]
         return json.dumps(results, indent=2)
 

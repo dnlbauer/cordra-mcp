@@ -289,10 +289,8 @@ class TestSearchObjects:
     """Test the search_objects tool."""
 
     @patch('cordra_mcp.server.cordra_client')
-    @patch('cordra_mcp.server.config')
-    async def test_search_objects_success(self, mock_config, mock_client):
+    async def test_search_objects_success(self, mock_client):
         """Test successful object search."""
-        mock_config.max_search_results = 1000
         mock_search_result = {
             "results": [
                 {"id": "people/john-doe", "type": "Person", "content": {"name": "John Doe"}},
@@ -313,13 +311,11 @@ class TestSearchObjects:
         assert parsed_result[1]["id"] == "people/jane-smith"
 
         # Verify the client was called with correct parameters
-        mock_client.find.assert_called_once_with("name:John", object_type=None, page_size=1000)
+        mock_client.find.assert_called_once_with("name:John", object_type=None, page_size=20)
 
     @patch('cordra_mcp.server.cordra_client')
-    @patch('cordra_mcp.server.config')
-    async def test_search_objects_with_type_filter(self, mock_config, mock_client):
+    async def test_search_objects_with_type_filter(self, mock_client):
         """Test object search with type filter."""
-        mock_config.max_search_results = 1000
         mock_search_result = {
             "results": [
                 {"id": "people/john-doe", "type": "Person", "content": {"name": "John Doe"}},
@@ -338,13 +334,11 @@ class TestSearchObjects:
         assert parsed_result[0]["type"] == "Person"
 
         # Verify the client was called with type filter
-        mock_client.find.assert_called_once_with("name:John", object_type="Person", page_size=1000)
+        mock_client.find.assert_called_once_with("name:John", object_type="Person", page_size=20)
 
     @patch('cordra_mcp.server.cordra_client')
-    @patch('cordra_mcp.server.config')
-    async def test_search_objects_with_limit(self, mock_config, mock_client):
+    async def test_search_objects_with_limit(self, mock_client):
         """Test object search with custom limit."""
-        mock_config.max_search_results = 1000
         mock_search_result = {
             "results": [
                 {"id": "people/john-doe", "type": "Person", "content": {"name": "John Doe"}},
@@ -365,10 +359,8 @@ class TestSearchObjects:
         mock_client.find.assert_called_once_with("name:John", object_type=None, page_size=50)
 
     @patch('cordra_mcp.server.cordra_client')
-    @patch('cordra_mcp.server.config')
-    async def test_search_objects_with_all_parameters(self, mock_config, mock_client):
+    async def test_search_objects_with_all_parameters(self, mock_client):
         """Test object search with all parameters."""
-        mock_config.max_search_results = 1000
         mock_search_result = {
             "results": [
                 {"id": "documents/report-123", "type": "Document", "content": {"title": "Report"}},
@@ -390,10 +382,8 @@ class TestSearchObjects:
         mock_client.find.assert_called_once_with("title:Report", object_type="Document", page_size=25)
 
     @patch('cordra_mcp.server.cordra_client')
-    @patch('cordra_mcp.server.config')
-    async def test_search_objects_empty_results(self, mock_config, mock_client):
+    async def test_search_objects_empty_results(self, mock_client):
         """Test object search with no results."""
-        mock_config.max_search_results = 1000
         mock_search_result = {
             "results": [],
             "total_size": 0,
@@ -408,39 +398,33 @@ class TestSearchObjects:
         parsed_result = json.loads(result)
         assert parsed_result == []
 
-        mock_client.find.assert_called_once_with("nonexistent:data", object_type=None, page_size=1000)
+        mock_client.find.assert_called_once_with("nonexistent:data", object_type=None, page_size=20)
 
     @patch('cordra_mcp.server.cordra_client')
-    @patch('cordra_mcp.server.config')
-    async def test_search_objects_client_error(self, mock_config, mock_client):
+    async def test_search_objects_client_error(self, mock_client):
         """Test object search with client error."""
-        mock_config.max_search_results = 1000
         mock_client.find = AsyncMock(side_effect=CordraClientError("Search failed"))
 
         with pytest.raises(RuntimeError) as exc_info:
             await search_objects("test:query")
 
         assert "Search failed:" in str(exc_info.value)
-        mock_client.find.assert_called_once_with("test:query", object_type=None, page_size=1000)
+        mock_client.find.assert_called_once_with("test:query", object_type=None, page_size=20)
 
     @patch('cordra_mcp.server.cordra_client')
-    @patch('cordra_mcp.server.config')
-    async def test_search_objects_value_error(self, mock_config, mock_client):
+    async def test_search_objects_value_error(self, mock_client):
         """Test object search with value error."""
-        mock_config.max_search_results = 1000
         mock_client.find = AsyncMock(side_effect=ValueError("Invalid query"))
 
         with pytest.raises(RuntimeError) as exc_info:
             await search_objects("invalid:query")
 
         assert "Invalid search parameters:" in str(exc_info.value)
-        mock_client.find.assert_called_once_with("invalid:query", object_type=None, page_size=1000)
+        mock_client.find.assert_called_once_with("invalid:query", object_type=None, page_size=20)
 
     @patch('cordra_mcp.server.cordra_client')
-    @patch('cordra_mcp.server.config')
-    async def test_search_objects_json_formatting(self, mock_config, mock_client):
+    async def test_search_objects_json_formatting(self, mock_client):
         """Test that search results are properly formatted as JSON."""
-        mock_config.max_search_results = 1000
         mock_search_result = {
             "results": [
                 {"id": "test/object", "type": "Test", "content": {"data": "value"}},
