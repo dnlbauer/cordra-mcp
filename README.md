@@ -24,7 +24,11 @@ ensuring safe exploration without risk of data modification or corruption.
 
 ### Tools
 
-- `search_objects` - Search for digital objects using a query string.
+- `search_objects` - Search for digital objects using a query string with pagination support.
+  - `query` - Lucene/Solr compatible search query
+  - `type` - Optional filter by object type  
+  - `limit` - Number of results per page (default: 1)
+  - `page_num` - Page number to retrieve, 0-based (default: 0)
 
 ## Configuration
 
@@ -35,7 +39,6 @@ The MCP server can be configured using environment variables with the `CORDRA_` 
 - `CORDRA_PASSWORD` - Password for authentication (optional)
 - `CORDRA_VERIFY_SSL` - SSL certificate verification (default: `true`)
 - `CORDRA_TIMEOUT` - Request timeout in seconds (default: `30`)
-- `CORDRA_MAX_SEARCH_RESULTS` - Maximum search results (default: `1000`)
 
 ## Usage
 

@@ -22,9 +22,6 @@ class CordraConfig(BaseSettings):
     password: str | None = Field(
         default=None, description="Password for Cordra authentication"
     )
-    max_search_results: int = Field(
-        default=1000, description="Maximum number of search results to return"
-    )
     verify_ssl: bool = Field(
         default=True, description="Whether to verify SSL certificates"
     )
