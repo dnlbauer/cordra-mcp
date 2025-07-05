@@ -35,14 +35,20 @@ Examples:
 - /author:smith - Find objects by author Smith
 - /name:John AND type:Person - Complex queries
 
+Pagination:
+- Results are paginated with 0-based page numbering
+- Use 'limit' to control page size (default: 1)
+- Use 'page_num' to specify which page to retrieve (default: 0)
+
 Returns a JSON list of matching objects with their full metadata."""
 )
 async def search_objects(
     query: str,
     type: str | None = None,
-    limit: int | None = None,
+    limit: int = 1,
+    page_num: int = 0,
 ) -> str:
-    """Search for digital objects in the Cordra repository.
+    """Search for digital objects in the Cordra repository with pagination support.
 
     Args:
         query: The search query string (Lucene/Solr compatible). Examples:
@@ -50,14 +56,15 @@ async def search_objects(
                - "/author:smith" - Find objects by author Smith
                - "/name:John AND type:Person" - Complex queries
         type: Optional filter by object type (e.g., "Person", "Document", "Project")
-        limit: Optional limit on number of results (default: config max_search_results)
+        limit: Page size - number of results per page (default: 1)
+        page_num: Page number to retrieve, 0-based (default: 0 for first page)
 
     Returns:
         JSON string containing list of matching objects with their full metadata
     """
     try:
-        effective_limit = limit if limit is not None else config.max_search_results
-        results = await cordra_client.find(query, object_type=type, limit=effective_limit)
+        search_result = await cordra_client.find(query, object_type=type, page_size=limit, page_num=page_num)
+        results = search_result["results"]
         return json.dumps(results, indent=2)
 
     except ValueError as e:
@@ -155,10 +162,23 @@ async def create_schema_resource(schema_name: str) -> str:
 async def register_schema_resources() -> None:
     """Register individual schema resources dynamically."""
     try:
-        # Get all available schemas
-        schemas = await cordra_client.find("type:Schema")
+        # Get all available schemas using pagination
+        all_schemas = []
+        page_num = 0
+        page_size = 20
 
-        for schema in schemas:
+        while True:
+            search_result = await cordra_client.find("type:Schema", page_size=page_size, page_num=page_num)
+            schemas = search_result["results"]
+            all_schemas.extend(schemas)
+
+            # Check if we've retrieved all schemas
+            if len(schemas) < page_size:
+                break
+
+            page_num += 1
+
+        for schema in all_schemas:
             schema_name = schema.get("content", {}).get("name")
             if not schema_name:
                 logger.warning("Schema without a name found, skipping.")
@@ -180,7 +200,7 @@ async def register_schema_resources() -> None:
                 )
             )
 
-        logger.info(f"Registered {len(schemas)} schema resources")
+        logger.info(f"Registered {len(all_schemas)} schema resources")
 
     except Exception as e:
         logger.warning(f"Failed to register schema resources: {e}")
