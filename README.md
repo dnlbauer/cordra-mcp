@@ -7,6 +7,8 @@ access to explore and understand Cordra repositories.
 This allows AI systems to quickly understand the data model and schema structure
 of a Cordra repository and to explore digital objects and their relationships.
 
+![Example](example.gif)
+
 ## Features
 
 - **Read-Only Access**: All operations are strictly read-only,
