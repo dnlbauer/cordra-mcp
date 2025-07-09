@@ -87,6 +87,51 @@ async def search_objects(
         raise RuntimeError(f"Search failed: {e}") from e
 
 
+@mcp.tool(
+    name="count_objects",
+    title="Count Cordra Objects matching a query",
+    description="""Count the total number of digital objects matching a search query.
+
+Examples:
+- /title:report - Count objects with 'report' in title
+- /author:smith - Count objects by author Smith
+- /name:John AND type:Person - Complex queries
+
+Returns the count of objects as integer.
+""",
+)
+async def count_objects(
+    query: str,
+    type: str | None = None,
+) -> str:
+    """Count digital objects in the Cordra repository matching a search query.
+
+    Args:
+        query: The search query string (Lucene/Solr compatible). Examples:
+               - "/title:report" - Count objects with "report" in title
+               - "/author:smith" - Count objects by author Smith
+               - "/name:John AND type:Person" - Complex queries
+        type: Optional filter by object type (e.g., "Person", "Document", "Project")
+
+    Returns:
+        integer with the number of objects matching the criteria.
+    """
+    try:
+        # Use page_size=1 to get minimal data, we only need the total count
+        search_result = await cordra_client.find(
+            query, object_type=type, page_size=1, page_num=0
+        )
+
+        total_size: int = search_result["total_size"]
+        return str(total_size)
+    except ValueError as e:
+        raise RuntimeError(f"Invalid search parameters: {e}") from e
+    except CordraAuthenticationError as e:
+        raise RuntimeError(f"Authentication failed: {e}") from e
+    except CordraClientError as e:
+        raise RuntimeError(f"Count failed: {e}") from e
+
+
 @mcp.resource(
     "cordra://objects/{prefix}/{suffix}",
     name="cordra-object",
@@ -218,7 +263,6 @@ async def register_schema_resources() -> None:
 
     except Exception as e:
         logger.warning(f"Failed to register schema resources: {e}")
-
 
 
 async def initialize_server() -> None:

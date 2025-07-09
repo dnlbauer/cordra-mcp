@@ -604,3 +604,110 @@ class TestGetCordraDesign:
         assert "type" in parsed_result
         assert "content" in parsed_result
         assert "metadata" in parsed_result
+
+
+class TestCountObjects:
+    """Test the count_objects tool."""
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_count_objects_success(self, mock_client):
+        """Test successful object count."""
+        mock_search_result = {
+            "results": [{"id": "people/john-doe", "type": "Person"}],
+            "total_size": 42,
+            "page_num": 0,
+            "page_size": 1,
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
+
+        result = await count_objects("name:John")
+
+        # Verify the result is a string representation of the count
+        assert result == "42"
+
+        # Verify the client was called with correct parameters
+        mock_client.find.assert_called_once_with(
+            "name:John", object_type=None, page_size=1, page_num=0
+        )
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_count_objects_with_type_filter(self, mock_client):
+        """Test object count with type filter."""
+        mock_search_result = {
+            "results": [{"id": "people/john-doe", "type": "Person"}],
+            "total_size": 15,
+            "page_num": 0,
+            "page_size": 1,
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
+
+        result = await count_objects("name:John", type="Person")
+
+        # Verify the result is a string representation of the count
+        assert result == "15"
+
+        # Verify the client was called with type filter
+        mock_client.find.assert_called_once_with(
+            "name:John", object_type="Person", page_size=1, page_num=0
+        )
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_count_objects_zero_results(self, mock_client):
+        """Test object count with zero results."""
+        mock_search_result = {
+            "results": [],
+            "total_size": 0,
+            "page_num": 0,
+            "page_size": 1,
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
+
+        result = await count_objects("nonexistent:data")
+
+        # Verify the result is "0"
+        assert result == "0"
+
+        mock_client.find.assert_called_once_with(
+            "nonexistent:data", object_type=None, page_size=1, page_num=0
+        )
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_count_objects_client_error(self, mock_client):
+        """Test object count with client error."""
+        mock_client.find = AsyncMock(side_effect=CordraClientError("Search failed"))
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await count_objects("test:query")
+
+        assert "Count failed:" in str(exc_info.value)
+        mock_client.find.assert_called_once_with(
+            "test:query", object_type=None, page_size=1, page_num=0
+        )
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_count_objects_value_error(self, mock_client):
+        """Test object count with value error."""
+        mock_client.find = AsyncMock(side_effect=ValueError("Invalid query"))
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await count_objects("invalid:query")
+
+        assert "Invalid search parameters:" in str(exc_info.value)
+        mock_client.find.assert_called_once_with(
+            "invalid:query", object_type=None, page_size=1, page_num=0
+        )
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_count_objects_authentication_error(self, mock_client):
+        """Test object count with authentication error."""
+        mock_client.find = AsyncMock(
+            side_effect=CordraAuthenticationError("Authentication failed")
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await count_objects("test:query")
+
+        assert "Authentication failed:" in str(exc_info.value)
+        mock_client.find.assert_called_once_with(
+            "test:query", object_type=None, page_size=1, page_num=0
+        )

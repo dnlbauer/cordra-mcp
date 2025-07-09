@@ -31,6 +31,9 @@ ensuring safe exploration without risk of data modification or corruption.
   - `type` - Optional filter by object type  
   - `limit` - Number of results per page (default: 1)
   - `page_num` - Page number to retrieve, 0-based (default: 0)
+- `count_objects` - Count the total number of objects matching a query.
+  - `query` - Lucene/Solr compatible search query
+  - `type` - Optional filter by object type  
 
 ## Configuration
 
