@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
 
@@ -35,6 +36,26 @@ jobs:
 
     - name: Run tests
       run: uv run pytest
+    
+    - name: Validate version consistency
+      # Ensure that the version is consistent across files and matches the tag if applicable
+      run: |
+        PYPROJECT_VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+        INIT_VERSION=$(python3 -c "import re; print(re.search(r'__version__ = \"(.+?)\"', open('src/cordra_mcp/__init__.py').read()).group(1))")
+        
+        if [ "$PYPROJECT_VERSION" != "$INIT_VERSION" ]; then
+          echo "Version mismatch: pyproject.toml=$PYPROJECT_VERSION, __init__.py=$INIT_VERSION"
+          exit 1
+        fi
+        
+        # Additionally check tag version if this is a tag build
+        if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          if [ "$TAG_VERSION" != "$PYPROJECT_VERSION" ]; then
+            echo "Version mismatch: tag=$TAG_VERSION, pyproject.toml=$PYPROJECT_VERSION"
+            exit 1
+          fi
+        fi
 
   docker:
     runs-on: ubuntu-latest
@@ -42,7 +63,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
     - uses: actions/checkout@v4
@@ -63,7 +84,7 @@ jobs:
       with:
         images: ghcr.io/${{ github.repository_owner }}/cordra-mcp
         tags: |
-          type=ref,event=branch
+          type=ref,event=tag
           type=raw,value=latest
     
     - name: Build and push Docker image
@@ -81,7 +102,7 @@ jobs:
     needs: test
     permissions:
       id-token: write
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
     - uses: actions/checkout@v4
