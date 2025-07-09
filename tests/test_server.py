@@ -306,12 +306,15 @@ class TestSearchObjects:
 
         # Verify the result is valid JSON
         parsed_result = json.loads(result)
-        assert len(parsed_result) == 2
-        assert parsed_result[0]["id"] == "people/john-doe"
-        assert parsed_result[1]["id"] == "people/jane-smith"
+        assert parsed_result["results"] == ["people/john-doe", "people/jane-smith"]
+        assert parsed_result["total_count"] == 2
+        assert parsed_result["page_num"] == 0
+        assert parsed_result["page_size"] == 1000
 
         # Verify the client was called with correct parameters
-        mock_client.find.assert_called_once_with("name:John", object_type=None, page_size=1, page_num=0)
+        mock_client.find.assert_called_once_with(
+            "name:John", object_type=None, page_size=25, page_num=0
+        )
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_with_type_filter(self, mock_client):
@@ -330,11 +333,13 @@ class TestSearchObjects:
 
         # Verify the result is valid JSON
         parsed_result = json.loads(result)
-        assert len(parsed_result) == 1
-        assert parsed_result[0]["type"] == "Person"
+        assert parsed_result["results"] == ["people/john-doe"]
+        assert parsed_result["total_count"] == 1
 
         # Verify the client was called with type filter
-        mock_client.find.assert_called_once_with("name:John", object_type="Person", page_size=1, page_num=0)
+        mock_client.find.assert_called_once_with(
+            "name:John", object_type="Person", page_size=25, page_num=0
+        )
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_with_limit(self, mock_client):
@@ -353,7 +358,8 @@ class TestSearchObjects:
 
         # Verify the result is valid JSON
         parsed_result = json.loads(result)
-        assert len(parsed_result) == 1
+        assert parsed_result["results"] == ["people/john-doe"]
+        assert parsed_result["page_size"] == 50
 
         # Verify the client was called with custom limit
         mock_client.find.assert_called_once_with("name:John", object_type=None, page_size=50, page_num=0)
@@ -375,11 +381,13 @@ class TestSearchObjects:
 
         # Verify the result is valid JSON
         parsed_result = json.loads(result)
-        assert len(parsed_result) == 1
-        assert parsed_result[0]["type"] == "Document"
+        assert parsed_result["results"] == ["documents/report-123"]
+        assert parsed_result["total_count"] == 1
 
         # Verify the client was called with all parameters
-        mock_client.find.assert_called_once_with("title:Report", object_type="Document", page_size=25, page_num=0)
+        mock_client.find.assert_called_once_with(
+            "title:Report", object_type="Document", page_size=25, page_num=0
+        )
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_empty_results(self, mock_client):
@@ -396,9 +404,12 @@ class TestSearchObjects:
 
         # Verify the result is valid JSON with empty array
         parsed_result = json.loads(result)
-        assert parsed_result == []
+        assert parsed_result["results"] == []
+        assert parsed_result["total_count"] == 0
 
-        mock_client.find.assert_called_once_with("nonexistent:data", object_type=None, page_size=1, page_num=0)
+        mock_client.find.assert_called_once_with(
+            "nonexistent:data", object_type=None, page_size=25, page_num=0
+        )
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_client_error(self, mock_client):
@@ -409,7 +420,9 @@ class TestSearchObjects:
             await search_objects("test:query")
 
         assert "Search failed:" in str(exc_info.value)
-        mock_client.find.assert_called_once_with("test:query", object_type=None, page_size=1, page_num=0)
+        mock_client.find.assert_called_once_with(
+            "test:query", object_type=None, page_size=25, page_num=0
+        )
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_value_error(self, mock_client):
@@ -420,7 +433,9 @@ class TestSearchObjects:
             await search_objects("invalid:query")
 
         assert "Invalid search parameters:" in str(exc_info.value)
-        mock_client.find.assert_called_once_with("invalid:query", object_type=None, page_size=1, page_num=0)
+        mock_client.find.assert_called_once_with(
+            "invalid:query", object_type=None, page_size=25, page_num=0
+        )
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_json_formatting(self, mock_client):
@@ -445,9 +460,8 @@ class TestSearchObjects:
         assert "  " in result  # Should have 2-space indentation
 
         # Verify the content is correctly formatted
-        assert parsed_result[0]["id"] == "test/object"
-        assert parsed_result[0]["type"] == "Test"
-        assert parsed_result[0]["content"]["data"] == "value"
+        assert parsed_result["results"] == ["test/object"]
+        assert parsed_result["total_count"] == 1
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_with_page_num(self, mock_client):
@@ -465,14 +479,20 @@ class TestSearchObjects:
         await search_objects("type:Document", page_num=1)
 
         # Verify the client was called with correct page number
-        mock_client.find.assert_called_once_with("type:Document", object_type=None, page_size=1, page_num=1)
+        mock_client.find.assert_called_once_with(
+            "type:Document", object_type=None, page_size=25, page_num=1
+        )
 
     @patch('cordra_mcp.server.cordra_client')
     async def test_search_objects_with_all_pagination_params(self, mock_client):
         """Test object search with all pagination parameters."""
         mock_search_result = {
             "results": [
-                {"id": "reports/report-51", "type": "Report", "content": {"title": "Report 51"}},
+                {
+                    "id": "reports/report-51",
+                    "type": "Report",
+                    "content": {"title": "Report 51"},
+                },
             ],
             "total_size": 100,
             "page_num": 5,
@@ -483,7 +503,9 @@ class TestSearchObjects:
         await search_objects("type:Report", type="Report", limit=10, page_num=5)
 
         # Verify the client was called with all parameters
-        mock_client.find.assert_called_once_with("type:Report", object_type="Report", page_size=10, page_num=5)
+        mock_client.find.assert_called_once_with(
+            "type:Report", object_type="Report", page_size=10, page_num=5
+        )
 
 
 class TestGetCordraDesign:

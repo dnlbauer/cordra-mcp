@@ -37,15 +37,21 @@ Examples:
 
 Pagination:
 - Results are paginated with 0-based page numbering
-- Use 'limit' to control page size (default: 1)
+- Use 'limit' to control page size (default: 25)
 - Use 'page_num' to specify which page to retrieve (default: 0)
 
-Returns a JSON list of matching objects with their full metadata."""
+Returns a JSON object containing:
+- object_ids: List of object IDs that match the search
+- total_count: Total number of objects matching the query
+- page_num: Current page number
+- page_size: Number of results per page
+
+Use the cordra://objects/{prefix}/{suffix} resources to retrieve full object details.""",
 )
 async def search_objects(
     query: str,
     type: str | None = None,
-    limit: int = 1,
+    limit: int = 25,
     page_num: int = 0,
 ) -> str:
     """Search for digital objects in the Cordra repository with pagination support.
@@ -56,16 +62,22 @@ async def search_objects(
                - "/author:smith" - Find objects by author Smith
                - "/name:John AND type:Person" - Complex queries
         type: Optional filter by object type (e.g., "Person", "Document", "Project")
-        limit: Page size - number of results per page (default: 1)
+        limit: Page size - number of results per page (default: 25)
         page_num: Page number to retrieve, 0-based (default: 0 for first page)
 
     Returns:
-        JSON string containing list of matching objects with their full metadata
+        JSON string containing object IDs and pagination info
     """
     try:
-        search_result = await cordra_client.find(query, object_type=type, page_size=limit, page_num=page_num)
-        results = search_result["results"]
-        return json.dumps(results, indent=2)
+        search_result = await cordra_client.find(
+            query, object_type=type, page_size=limit, page_num=page_num
+        )
+
+        # Extract only the IDs from the results
+        search_result["results"] = [obj["id"] for obj in search_result["results"]]
+        # Rename for consistency with documentation
+        search_result["total_count"] = search_result.pop("total_size")
+        return json.dumps(search_result, indent=2)
 
     except ValueError as e:
         raise RuntimeError(f"Invalid search parameters: {e}") from e
@@ -168,7 +180,9 @@ async def register_schema_resources() -> None:
         page_size = 20
 
         while True:
-            search_result = await cordra_client.find("type:Schema", page_size=page_size, page_num=page_num)
+            search_result = await cordra_client.find(
+                "type:Schema", page_size=page_size, page_num=page_num
+            )
             schemas = search_result["results"]
             all_schemas.extend(schemas)
 
