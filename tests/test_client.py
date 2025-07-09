@@ -1,5 +1,6 @@
 """Unit tests for the Cordra client."""
 
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -15,7 +16,7 @@ from cordra_mcp.config import CordraConfig
 
 
 @pytest.fixture
-def config():
+def config() -> CordraConfig:
     """Create a test configuration."""
     return CordraConfig(
         base_url="https://test.example.com",
@@ -26,13 +27,13 @@ def config():
 
 
 @pytest.fixture
-def client(config):
+def client(config: CordraConfig) -> CordraClient:
     """Create a test client."""
     return CordraClient(config)
 
 
 @pytest.fixture
-def mock_cordra_object():
+def mock_cordra_object() -> dict[str, Any]:
     """Create a mock CordraObject response (dictionary)."""
     return {
         "type": "TestType",
@@ -59,7 +60,7 @@ def mock_cordra_object():
 class TestDigitalObject:
     """Test the DigitalObject model."""
 
-    def test_digital_object_creation(self):
+    def test_digital_object_creation(self) -> None:
         """Test creating a DigitalObject."""
         obj = DigitalObject(
             id="test/123",
@@ -89,7 +90,7 @@ class TestDigitalObject:
         assert payload["size"] == 1024
         assert payload["filename"] == "file1.txt"
 
-    def test_digital_object_optional_fields(self):
+    def test_digital_object_optional_fields(self) -> None:
         """Test DigitalObject with only required fields."""
         obj = DigitalObject(id="test/123", type="TestType", content={"title": "Test"})
 
@@ -104,13 +105,13 @@ class TestDigitalObject:
 class TestCordraClient:
     """Test the CordraClient class."""
 
-    def test_client_initialization(self, config):
+    def test_client_initialization(self, config: CordraConfig) -> None:
         """Test client initialization."""
         client = CordraClient(config)
         assert client.config == config
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_get_object_success(self, mock_get, client, mock_cordra_object):
+    async def test_get_object_success(self, mock_get: Any, client: CordraClient, mock_cordra_object: dict[str, Any]) -> None:
         """Test successful object retrieval."""
         mock_response = mock_get.return_value
         mock_response.status_code = 200
@@ -137,7 +138,7 @@ class TestCordraClient:
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_get_object_not_found(self, mock_get, client):
+    async def test_get_object_not_found(self, mock_get: Any, client: CordraClient) -> None:
         """Test object not found exception."""
         mock_response = mock_get.return_value
         mock_response.status_code = 404
@@ -149,7 +150,7 @@ class TestCordraClient:
         assert "Resource not found" in str(exc_info.value)
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_get_object_general_error(self, mock_get, client):
+    async def test_get_object_general_error(self, mock_get: Any, client: CordraClient) -> None:
         """Test general error handling."""
         from requests import RequestException
 
@@ -161,7 +162,7 @@ class TestCordraClient:
         assert "Failed to retrieve object test/123" in str(exc_info.value)
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_success(self, mock_get, client):
+    async def test_find_success(self, mock_get: Any, client: CordraClient) -> None:
         """Test successful find operation."""
         mock_response_data = {
             "results": [
@@ -196,7 +197,7 @@ class TestCordraClient:
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_empty_results(self, mock_get, client):
+    async def test_find_empty_results(self, mock_get: Any, client: CordraClient) -> None:
         """Test find with empty results."""
         mock_response_data = {"results": [], "size": 0, "pageNum": 0, "pageSize": 20}
         mock_response = mock_get.return_value
@@ -218,7 +219,7 @@ class TestCordraClient:
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_error(self, mock_get, client):
+    async def test_find_error(self, mock_get: Any, client: CordraClient) -> None:
         """Test find error handling."""
         from requests import RequestException
 
@@ -231,7 +232,7 @@ class TestCordraClient:
         assert "Search failed" in str(exc_info.value)
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_with_type_filter(self, mock_get, client):
+    async def test_find_with_type_filter(self, mock_get: Any, client: CordraClient) -> None:
         """Test find operation with type filter constructs correct query."""
         mock_response_data = {"results": [], "size": 0, "pageNum": 0, "pageSize": 20}
         mock_response = mock_get.return_value
@@ -248,7 +249,7 @@ class TestCordraClient:
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_with_page_size(self, mock_get, client):
+    async def test_find_with_page_size(self, mock_get: Any, client: CordraClient) -> None:
         """Test find operation with custom page size."""
         mock_response_data = {"results": [], "size": 0, "pageNum": 0, "pageSize": 50}
         mock_response = mock_get.return_value
@@ -265,7 +266,7 @@ class TestCordraClient:
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_with_type_and_page_size(self, mock_get, client):
+    async def test_find_with_type_and_page_size(self, mock_get: Any, client: CordraClient) -> None:
         """Test find operation with both type filter and page size."""
         mock_response_data = {"results": [], "size": 0, "pageNum": 0, "pageSize": 25}
         mock_response = mock_get.return_value
@@ -282,7 +283,7 @@ class TestCordraClient:
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_default_params(self, mock_get, client):
+    async def test_find_default_params(self, mock_get: Any, client: CordraClient) -> None:
         """Test find operation with default parameters."""
         mock_response_data = {"results": [], "size": 0, "pageNum": 0, "pageSize": 20}
         mock_response = mock_get.return_value
@@ -299,7 +300,7 @@ class TestCordraClient:
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_with_page_num(self, mock_get, client):
+    async def test_find_with_page_num(self, mock_get: Any, client: CordraClient) -> None:
         """Test find operation with specific page number."""
         mock_response_data = {"results": [], "size": 100, "pageNum": 2, "pageSize": 20}
         mock_response = mock_get.return_value
@@ -319,7 +320,7 @@ class TestCordraClient:
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_find_with_custom_page_size_and_num(self, mock_get, client):
+    async def test_find_with_custom_page_size_and_num(self, mock_get: Any, client: CordraClient) -> None:
         """Test find operation with custom page size and page number."""
         mock_response_data = {"results": [], "size": 500, "pageNum": 5, "pageSize": 10}
         mock_response = mock_get.return_value
@@ -339,7 +340,7 @@ class TestCordraClient:
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_get_design_success(self, mock_get, client):
+    async def test_get_design_success(self, mock_get: Any, client: CordraClient) -> None:
         """Test successful design object retrieval."""
         mock_design_data = {
             "type": "CordraDesign",
@@ -368,7 +369,7 @@ class TestCordraClient:
         )
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_get_design_authentication_error(self, mock_get, client):
+    async def test_get_design_authentication_error(self, mock_get: Any, client: CordraClient) -> None:
         """Test design object retrieval with authentication error."""
         mock_response = mock_get.return_value
         mock_response.status_code = 403
@@ -380,7 +381,7 @@ class TestCordraClient:
         assert "Authentication failed" in str(exc_info.value)
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_get_design_not_found(self, mock_get, client):
+    async def test_get_design_not_found(self, mock_get: Any, client: CordraClient) -> None:
         """Test design object retrieval with not found error."""
         mock_response = mock_get.return_value
         mock_response.status_code = 404
@@ -392,7 +393,7 @@ class TestCordraClient:
         assert "Resource not found" in str(exc_info.value)
 
     @patch("cordra_mcp.client.requests.Session.get")
-    async def test_get_design_request_error(self, mock_get, client):
+    async def test_get_design_request_error(self, mock_get: Any, client: CordraClient) -> None:
         """Test design object retrieval with request error."""
         from requests import RequestException
 
@@ -407,7 +408,7 @@ class TestCordraClient:
 class TestCordraConfig:
     """Test the CordraConfig class."""
 
-    def test_default_config(self):
+    def test_default_config(self) -> None:
         """Test default configuration values."""
         config = CordraConfig()
         assert config.base_url == "https://localhost:8443"

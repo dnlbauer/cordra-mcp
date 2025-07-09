@@ -1,6 +1,7 @@
 """Unit tests for the MCP server."""
 
 import json
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -20,7 +21,7 @@ from cordra_mcp.server import (
 
 
 @pytest.fixture
-def sample_digital_object():
+def sample_digital_object() -> DigitalObject:
     """Create a sample DigitalObject for testing."""
     return DigitalObject(
         id="people/john-doe-123",
@@ -47,7 +48,9 @@ class TestGetCordraObject:
     """Test the get_cordra_object resource handler."""
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_get_object_success(self, mock_client, sample_digital_object):
+    async def test_get_object_success(
+        self, mock_client: Any, sample_digital_object: DigitalObject
+    ) -> None:
         """Test successful object retrieval."""
         mock_client.get_object = AsyncMock(return_value=sample_digital_object)
 
@@ -67,7 +70,7 @@ class TestGetCordraObject:
         mock_client.get_object.assert_called_once_with("people/john-doe-123")
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_get_object_not_found(self, mock_client):
+    async def test_get_object_not_found(self, mock_client: Any) -> None:
         """Test object not found exception."""
         mock_client.get_object = AsyncMock(
             side_effect=CordraNotFoundError("Object not found: people/nonexistent")
@@ -80,7 +83,7 @@ class TestGetCordraObject:
         mock_client.get_object.assert_called_once_with("people/nonexistent")
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_get_object_client_error(self, mock_client):
+    async def test_get_object_client_error(self, mock_client: Any) -> None:
         """Test general client error handling."""
         mock_client.get_object = AsyncMock(
             side_effect=CordraClientError("Connection failed")
@@ -94,7 +97,9 @@ class TestGetCordraObject:
         mock_client.get_object.assert_called_once_with("people/john-doe-123")
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_object_id_construction(self, mock_client, sample_digital_object):
+    async def test_object_id_construction(
+        self, mock_client: Any, sample_digital_object: DigitalObject
+    ) -> None:
         """Test that object ID is correctly constructed from prefix and suffix."""
         mock_client.get_object = AsyncMock(return_value=sample_digital_object)
 
@@ -110,7 +115,9 @@ class TestGetCordraObject:
             mock_client.get_object.assert_called_with(expected_id)
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_json_formatting(self, mock_client, sample_digital_object):
+    async def test_json_formatting(
+        self, mock_client: Any, sample_digital_object: DigitalObject
+    ) -> None:
         """Test that the returned JSON is properly formatted."""
         mock_client.get_object = AsyncMock(return_value=sample_digital_object)
 
@@ -132,7 +139,7 @@ class TestGetCordraObject:
         assert "payloads" in parsed_result
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_minimal_object(self, mock_client):
+    async def test_minimal_object(self, mock_client: Any) -> None:
         """Test handling of object with minimal data."""
         minimal_object = DigitalObject(
             id="test/minimal",
@@ -159,7 +166,7 @@ class TestSchemaResourceFunctions:
     """Test the schema resource functions."""
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_create_schema_resource_success(self, mock_client):
+    async def test_create_schema_resource_success(self, mock_client: Any) -> None:
         """Test successful schema resource creation."""
         mock_schema = DigitalObject(
             id="test/user-schema",
@@ -182,7 +189,7 @@ class TestSchemaResourceFunctions:
         mock_client.get_schema.assert_called_once_with("User")
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_create_schema_resource_not_found(self, mock_client):
+    async def test_create_schema_resource_not_found(self, mock_client: Any) -> None:
         """Test schema resource creation with schema not found."""
         mock_client.get_schema = AsyncMock(
             side_effect=CordraNotFoundError("Schema not found")
@@ -197,7 +204,7 @@ class TestSchemaResourceFunctions:
         mock_client.get_schema.assert_called_once_with("NonExistent")
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_register_schema_resources_success(self, mock_client):
+    async def test_register_schema_resources_success(self, mock_client: Any) -> None:
         """Test successful schema resource registration."""
         mock_search_result = {
             "results": [
@@ -226,7 +233,9 @@ class TestSchemaResourceFunctions:
         assert mock_mcp.add_resource.call_count == 3
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_register_schema_resources_missing_name(self, mock_client):
+    async def test_register_schema_resources_missing_name(
+        self, mock_client: Any
+    ) -> None:
         """Test schema resource registration with objects missing name field."""
         mock_search_result = {
             "results": [
@@ -249,7 +258,9 @@ class TestSchemaResourceFunctions:
         assert mock_mcp.add_resource.call_count == 2
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_register_schema_resources_client_error(self, mock_client):
+    async def test_register_schema_resources_client_error(
+        self, mock_client: Any
+    ) -> None:
         """Test schema resource registration with client error."""
         mock_client.find = AsyncMock(side_effect=CordraClientError("Search failed"))
 
@@ -263,7 +274,7 @@ class TestSchemaResourceFunctions:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_register_schema_resources_pagination(self, mock_client):
+    async def test_register_schema_resources_pagination(self, mock_client: Any) -> None:
         """Test schema resource registration with pagination."""
         # Mock multiple pages of results
         # First page with full 20 results (simulating more schemas)
@@ -309,7 +320,7 @@ class TestSearchObjects:
     """Test the search_objects tool."""
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_search_objects_success(self, mock_client):
+    async def test_search_objects_success(self, mock_client: Any) -> None:
         """Test successful object search."""
         mock_search_result = {
             "results": [
@@ -345,7 +356,7 @@ class TestSearchObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_search_objects_with_type_filter(self, mock_client):
+    async def test_search_objects_with_type_filter(self, mock_client: Any) -> None:
         """Test object search with type filter."""
         mock_search_result = {
             "results": [
@@ -374,7 +385,7 @@ class TestSearchObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_search_objects_with_limit(self, mock_client):
+    async def test_search_objects_with_limit(self, mock_client: Any) -> None:
         """Test object search with custom limit."""
         mock_search_result = {
             "results": [
@@ -403,7 +414,7 @@ class TestSearchObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_search_objects_with_all_parameters(self, mock_client):
+    async def test_search_objects_with_all_parameters(self, mock_client: Any) -> None:
         """Test object search with all parameters."""
         mock_search_result = {
             "results": [
@@ -432,7 +443,7 @@ class TestSearchObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_search_objects_empty_results(self, mock_client):
+    async def test_search_objects_empty_results(self, mock_client: Any) -> None:
         """Test object search with no results."""
         mock_search_result = {
             "results": [],
@@ -454,7 +465,7 @@ class TestSearchObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_search_objects_client_error(self, mock_client):
+    async def test_search_objects_client_error(self, mock_client: Any) -> None:
         """Test object search with client error."""
         mock_client.find = AsyncMock(side_effect=CordraClientError("Search failed"))
 
@@ -467,7 +478,7 @@ class TestSearchObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_search_objects_value_error(self, mock_client):
+    async def test_search_objects_value_error(self, mock_client: Any) -> None:
         """Test object search with value error."""
         mock_client.find = AsyncMock(side_effect=ValueError("Invalid query"))
 
@@ -480,7 +491,7 @@ class TestSearchObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_search_objects_json_formatting(self, mock_client):
+    async def test_search_objects_json_formatting(self, mock_client: Any) -> None:
         """Test that search results are properly formatted as JSON."""
         mock_search_result = {
             "results": [
@@ -506,7 +517,7 @@ class TestSearchObjects:
         assert parsed_result["total_count"] == 1
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_search_objects_with_page_num(self, mock_client):
+    async def test_search_objects_with_page_num(self, mock_client: Any) -> None:
         """Test object search with page number parameter."""
         mock_search_result = {
             "results": [
@@ -530,7 +541,9 @@ class TestSearchObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_search_objects_with_all_pagination_params(self, mock_client):
+    async def test_search_objects_with_all_pagination_params(
+        self, mock_client: Any
+    ) -> None:
         """Test object search with all pagination parameters."""
         mock_search_result = {
             "results": [
@@ -558,7 +571,7 @@ class TestGetCordraDesign:
     """Test the get_cordra_design resource handler."""
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_get_design_success(self, mock_client):
+    async def test_get_design_success(self, mock_client: Any) -> None:
         """Test successful design object retrieval."""
         mock_design = DigitalObject(
             id="design",
@@ -586,7 +599,7 @@ class TestGetCordraDesign:
         mock_client.get_design.assert_called_once()
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_get_design_not_found(self, mock_client):
+    async def test_get_design_not_found(self, mock_client: Any) -> None:
         """Test design object not found exception."""
         mock_client.get_design = AsyncMock(
             side_effect=CordraNotFoundError("Design object not found")
@@ -599,7 +612,7 @@ class TestGetCordraDesign:
         mock_client.get_design.assert_called_once()
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_get_design_authentication_error(self, mock_client):
+    async def test_get_design_authentication_error(self, mock_client: Any) -> None:
         """Test design object authentication error."""
         mock_client.get_design = AsyncMock(
             side_effect=CordraAuthenticationError("Authentication failed")
@@ -612,7 +625,7 @@ class TestGetCordraDesign:
         mock_client.get_design.assert_called_once()
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_get_design_client_error(self, mock_client):
+    async def test_get_design_client_error(self, mock_client: Any) -> None:
         """Test design object general client error."""
         mock_client.get_design = AsyncMock(
             side_effect=CordraClientError("Connection failed")
@@ -626,7 +639,7 @@ class TestGetCordraDesign:
         mock_client.get_design.assert_called_once()
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_get_design_json_formatting(self, mock_client):
+    async def test_get_design_json_formatting(self, mock_client: Any) -> None:
         """Test that the design object is properly formatted as JSON."""
         mock_design = DigitalObject(
             id="design",
@@ -656,7 +669,7 @@ class TestCountObjects:
     """Test the count_objects tool."""
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_count_objects_success(self, mock_client):
+    async def test_count_objects_success(self, mock_client: Any) -> None:
         """Test successful object count."""
         mock_search_result = {
             "results": [{"id": "people/john-doe", "type": "Person"}],
@@ -677,7 +690,7 @@ class TestCountObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_count_objects_with_type_filter(self, mock_client):
+    async def test_count_objects_with_type_filter(self, mock_client: Any) -> None:
         """Test object count with type filter."""
         mock_search_result = {
             "results": [{"id": "people/john-doe", "type": "Person"}],
@@ -698,7 +711,7 @@ class TestCountObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_count_objects_zero_results(self, mock_client):
+    async def test_count_objects_zero_results(self, mock_client: Any) -> None:
         """Test object count with zero results."""
         mock_search_result = {
             "results": [],
@@ -718,7 +731,7 @@ class TestCountObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_count_objects_client_error(self, mock_client):
+    async def test_count_objects_client_error(self, mock_client: Any) -> None:
         """Test object count with client error."""
         mock_client.find = AsyncMock(side_effect=CordraClientError("Search failed"))
 
@@ -731,7 +744,7 @@ class TestCountObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_count_objects_value_error(self, mock_client):
+    async def test_count_objects_value_error(self, mock_client: Any) -> None:
         """Test object count with value error."""
         mock_client.find = AsyncMock(side_effect=ValueError("Invalid query"))
 
@@ -744,7 +757,7 @@ class TestCountObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_count_objects_authentication_error(self, mock_client):
+    async def test_count_objects_authentication_error(self, mock_client: Any) -> None:
         """Test object count with authentication error."""
         mock_client.find = AsyncMock(
             side_effect=CordraAuthenticationError("Authentication failed")

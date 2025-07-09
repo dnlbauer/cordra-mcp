@@ -61,6 +61,7 @@ ignore = ["E501"]
 python_version = "3.11"
 strict = true
 warn_return_any = true
+files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
 module = ["cordra.*"]
