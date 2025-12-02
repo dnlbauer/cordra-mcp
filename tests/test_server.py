@@ -16,6 +16,7 @@ from cordra_mcp.server import (
     count_objects,
     get_cordra_design,
     get_cordra_object,
+    get_object,
     search_objects,
 )
 
@@ -160,6 +161,67 @@ class TestGetCordraObject:
         assert parsed_result["metadata"] is None
         assert parsed_result["acl"] is None
         assert parsed_result["payloads"] is None
+
+
+class TestGetObject:
+    """Test the get_object tool."""
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_get_object_success(
+        self, mock_client: Any, sample_digital_object: DigitalObject
+    ) -> None:
+        """Test successful object retrieval with complete ID."""
+        mock_client.get_object = AsyncMock(return_value=sample_digital_object)
+
+        result = await get_object("people/john-doe-123")
+
+        # Verify the result is valid JSON
+        parsed_result = json.loads(result)
+        assert parsed_result["id"] == "people/john-doe-123"
+        assert parsed_result["type"] == "Person"
+        assert parsed_result["content"]["name"] == "John Doe"
+
+        # Verify the client was called with the correct object ID
+        mock_client.get_object.assert_called_once_with("people/john-doe-123")
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_get_object_not_found(self, mock_client: Any) -> None:
+        """Test object not found exception."""
+        mock_client.get_object = AsyncMock(
+            side_effect=CordraNotFoundError("Object not found: test/nonexistent")
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await get_object("test/nonexistent")
+
+        assert "Object not found: test/nonexistent" in str(exc_info.value)
+        mock_client.get_object.assert_called_once_with("test/nonexistent")
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_get_object_client_error(self, mock_client: Any) -> None:
+        """Test general client error handling."""
+        mock_client.get_object = AsyncMock(
+            side_effect=CordraClientError("Connection failed")
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await get_object("test/obj123")
+
+        assert "Failed to retrieve object test/obj123" in str(exc_info.value)
+        mock_client.get_object.assert_called_once_with("test/obj123")
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_get_object_authentication_error(self, mock_client: Any) -> None:
+        """Test authentication error handling."""
+        mock_client.get_object = AsyncMock(
+            side_effect=CordraAuthenticationError("Authentication failed")
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await get_object("test/obj123")
+
+        assert "Authentication failed" in str(exc_info.value)
+        mock_client.get_object.assert_called_once_with("test/obj123")
 
 
 class TestSchemaResourceFunctions:

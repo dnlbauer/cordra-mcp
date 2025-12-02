@@ -26,6 +26,8 @@ ensuring safe exploration without risk of data modification or corruption.
 
 ### Tools
 
+- `get_object` - Retrieve a digital object by its complete ID/handle.
+  - `object_id` - Complete object ID (e.g., "test/abc123")
 - `search_objects` - Search for digital objects using a query string with pagination support.
   - `query` - Lucene/Solr compatible search query
   - `type` - Optional filter by object type

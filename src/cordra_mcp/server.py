@@ -134,6 +134,41 @@ async def count_objects(
         raise RuntimeError(f"Count failed: {e}") from e
 
 
+@mcp.tool(
+    name="get_object",
+    title="Get Cordra Object by ID",
+    description="""Retrieve a digital object by its complete ID/handle.
+
+Returns: Full object with metadata as JSON
+Example: get_object("test/abc123")""",
+)
+async def get_object(object_id: str) -> str:
+    """Retrieve a Cordra digital object by its complete ID.
+
+    Args:
+        object_id: The complete object ID/handle (e.g., "test/abc123" or "wildlive/7a4b7b65f8bb155ad36d")
+
+    Returns:
+        JSON string containing the complete digital object with all metadata
+
+    Raises:
+        RuntimeError: If the object is not found or there's an API error
+    """
+    try:
+        digital_object = await cordra_client.get_object(object_id)
+        object_dict = digital_object.model_dump()
+        return json.dumps(object_dict, indent=2)
+
+    except ValueError as e:
+        raise RuntimeError(f"Invalid object ID: {e}") from e
+    except CordraNotFoundError as e:
+        raise RuntimeError(f"Object not found: {object_id}") from e
+    except CordraAuthenticationError as e:
+        raise RuntimeError(f"Authentication failed: {e}") from e
+    except CordraClientError as e:
+        raise RuntimeError(f"Failed to retrieve object {object_id}: {e}") from e
+
+
 @mcp.resource(
     "cordra://objects/{prefix}/{suffix}",
     name="cordra-object",
