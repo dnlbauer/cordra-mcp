@@ -23,6 +23,7 @@ config = CordraConfig()
 cordra_client = CordraClient(config)
 
 logger = logging.getLogger(__name__)
+logger.setLevel(config.log_level)
 
 
 @mcp.tool(

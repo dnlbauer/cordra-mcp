@@ -37,13 +37,14 @@ ensuring safe exploration without risk of data modification or corruption.
 
 ## Configuration
 
-The MCP server can be configured using environment variables with the `CORDRA_` prefix:
+The MCP server can be configured using environment variables:
 
 - `CORDRA_BASE_URL` - Cordra server URL (default: `https://localhost:8443`)
 - `CORDRA_USERNAME` - Username for authentication (optional)
 - `CORDRA_PASSWORD` - Password for authentication (optional)
 - `CORDRA_VERIFY_SSL` - SSL certificate verification (default: `true`)
 - `CORDRA_TIMEOUT` - Request timeout in seconds (default: `30`)
+- `LOGLEVEL` - Logging level (default: `INFO`, options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`)
 
 ## Usage
 
