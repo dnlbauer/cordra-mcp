@@ -33,7 +33,8 @@ logger.setLevel(config.log_level)
 
 Examples:
 - /title:report - Find objects with 'report' in title
-- /author:smith - Find objects by author Smith
+- type:Person - Find all Persons. Note that "type" is special and uses no slash "/"
+- /author/name:Daniel - Find objects with author Daniel as nested property.
 - /name:John AND type:Person - Complex queries
 
 Pagination:
@@ -59,9 +60,11 @@ async def search_objects(
 
     Args:
         query: The search query string (Lucene/Solr compatible). Examples:
-               - "/title:report" - Find objects with "report" in title
-               - "/author:smith" - Find objects by author Smith
-               - "/name:John AND type:Person" - Complex queries
+                - /title:report - Find objects with 'report' in title
+                - type:Person - Find all Persons. Note that "type" is special and uses no slash "/"
+                - /author/name:Daniel - Find objects with author Daniel as nested property.
+                - /name:John AND type:Person - Complex queries
+
         type: Optional filter by object type (e.g., "Person", "Document", "Project")
         limit: Page size - number of results per page (default: 25)
         page_num: Page number to retrieve, 0-based (default: 0 for first page)
@@ -95,7 +98,8 @@ async def search_objects(
 
 Examples:
 - /title:report - Count objects with 'report' in title
-- /author:smith - Count objects by author Smith
+- type:Person - Find all Persons. Note that "type" is special and uses no slash "/"
+- /author/name:Daniel - Find objects with author Daniel as nested property.
 - /name:John AND type:Person - Complex queries
 
 Returns the count of objects as integer.
@@ -109,9 +113,10 @@ async def count_objects(
 
     Args:
         query: The search query string (Lucene/Solr compatible). Examples:
-               - "/title:report" - Count objects with "report" in title
-               - "/author:smith" - Count objects by author Smith
-               - "/name:John AND type:Person" - Complex queries
+                - /title:report - Find objects with 'report' in title
+                - type:Person - Find all Persons. Note that "type" is special and uses no slash "/"
+                - /author/name:Daniel - Find objects with author Daniel as nested property.
+                - /name:John AND type:Person - Complex queries
         type: Optional filter by object type (e.g., "Person", "Document", "Project")
 
     Returns:
