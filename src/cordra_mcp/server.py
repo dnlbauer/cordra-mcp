@@ -7,6 +7,7 @@ import logging
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.resources import FunctionResource
 
+from . import __version__
 from .client import (
     CordraAuthenticationError,
     CordraClient,
@@ -268,7 +269,7 @@ async def register_schema_resources() -> None:
 
 async def initialize_server() -> None:
     """Initialize server resources before starting."""
-    logger.info("Initializing Cordra MCP server...")
+    logger.info(f"Initializing Cordra MCP server v{__version__}...")
     await register_schema_resources()
     logger.info("Server initialization complete")
 
