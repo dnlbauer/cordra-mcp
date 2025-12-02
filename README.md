@@ -28,12 +28,29 @@ ensuring safe exploration without risk of data modification or corruption.
 
 - `search_objects` - Search for digital objects using a query string with pagination support.
   - `query` - Lucene/Solr compatible search query
-  - `type` - Optional filter by object type  
-  - `limit` - Number of results per page (default: 1)
+  - `type` - Optional filter by object type
+  - `limit` - Number of results per page (default: 25)
   - `page_num` - Page number to retrieve, 0-based (default: 0)
 - `count_objects` - Count the total number of objects matching a query.
   - `query` - Lucene/Solr compatible search query
-  - `type` - Optional filter by object type  
+  - `type` - Optional filter by object type
+
+#### Query Syntax
+
+**CRITICAL**: JSON properties MUST be prefixed with `/`
+
+✅ **Correct Examples:**
+- `/title:*report*` - Wildcard search in title field
+- `/author/name:Daniel` - Nested property access
+- `/status:active AND /priority:high` - Boolean operators
+- Use `type` parameter instead of including `type:` in query
+
+❌ **Wrong (will fail):**
+- `name:John` - Missing `/` prefix
+- `author/name:Daniel` - Missing leading `/`
+- `type:Person` - Use the `type` parameter instead
+
+**Operators:** `*` (wildcard), `?` (single char), `AND`, `OR`, `NOT`, `"phrases"`  
 
 ## Configuration
 

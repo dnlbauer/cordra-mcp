@@ -465,6 +465,39 @@ class TestSearchObjects:
         )
 
     @patch("cordra_mcp.server.cordra_client")
+    async def test_search_objects_with_slash_prefixed_properties(
+        self, mock_client: Any
+    ) -> None:
+        """Test object search with correct slash-prefixed property syntax."""
+        mock_search_result = {
+            "results": [
+                {
+                    "id": "reports/2024-annual",
+                    "type": "Document",
+                    "content": {"title": "Annual Report 2024"},
+                },
+            ],
+            "total_size": 1,
+            "page_num": 0,
+            "page_size": 25,
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
+
+        # Test with slash-prefixed property and nested property
+        result = await search_objects("/title:*report* AND /author/name:Daniel")
+
+        parsed_result = json.loads(result)
+        assert parsed_result["results"] == ["reports/2024-annual"]
+        assert parsed_result["total_count"] == 1
+
+        mock_client.find.assert_called_once_with(
+            "/title:*report* AND /author/name:Daniel",
+            object_type=None,
+            page_size=25,
+            page_num=0,
+        )
+
+    @patch("cordra_mcp.server.cordra_client")
     async def test_search_objects_client_error(self, mock_client: Any) -> None:
         """Test object search with client error."""
         mock_client.find = AsyncMock(side_effect=CordraClientError("Search failed"))

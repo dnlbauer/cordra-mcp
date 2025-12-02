@@ -29,26 +29,26 @@ logger.setLevel(config.log_level)
 @mcp.tool(
     name="search_objects",
     title="Search Cordra Objects",
-    description="""Search for digital objects in the Cordra repository using Lucene/Solr query syntax.
+    description="""Search for digital objects using Lucene/Solr query syntax.
 
-Examples:
-- /title:report - Find objects with 'report' in title
-- type:Person - Find all Persons. Note that "type" is special and uses no slash "/"
-- /author/name:Daniel - Find objects with author Daniel as nested property.
-- /name:John AND type:Person - Complex queries
+CRITICAL SYNTAX RULES:
+1. Properties MUST start with '/' - Example: /title:report
+2. Nested properties: /parent/child:value
+3. Use 'type' parameter - NEVER 'type:' in query
+4. Operators: * ? AND OR NOT "phrases"
 
-Pagination:
-- Results are paginated with 0-based page numbering
-- Use 'limit' to control page size (default: 25)
-- Use 'page_num' to specify which page to retrieve (default: 0)
+✅ CORRECT:
+- /title:*report* /author/name:Daniel
+- /status:active AND /priority:high
+- query="/title:report", type="Document"
 
-Returns a JSON object containing:
-- object_ids: List of object IDs that match the search
-- total_count: Total number of objects matching the query
-- page_num: Current page number
-- page_size: Number of results per page
+❌ WRONG:
+- name:John (missing /)
+- author/name:Daniel (missing /)
+- type:Person (use type parameter)
 
-Use the cordra://objects/{prefix}/{suffix} resources to retrieve full object details.""",
+Returns: {results: [ids], total_count, page_num, page_size}
+Pagination: limit (default 25), page_num (0-based)""",
 )
 async def search_objects(
     query: str,
@@ -59,12 +59,9 @@ async def search_objects(
     """Search for digital objects in the Cordra repository with pagination support.
 
     Args:
-        query: The search query string (Lucene/Solr compatible). Examples:
-                - /title:report - Find objects with 'report' in title
-                - type:Person - Find all Persons. Note that "type" is special and uses no slash "/"
-                - /author/name:Daniel - Find objects with author Daniel as nested property.
-                - /name:John AND type:Person - Complex queries
-
+        query: Search query (Lucene/Solr). Properties MUST start with '/'.
+               ✅ CORRECT: /title:*report*, /author/name:Daniel
+               ❌ WRONG: name:John, author/name:Daniel, type:Person
         type: Optional filter by object type (e.g., "Person", "Document", "Project")
         limit: Page size - number of results per page (default: 25)
         page_num: Page number to retrieve, 0-based (default: 0 for first page)
@@ -112,11 +109,9 @@ async def count_objects(
     """Count digital objects in the Cordra repository matching a search query.
 
     Args:
-        query: The search query string (Lucene/Solr compatible). Examples:
-                - /title:report - Find objects with 'report' in title
-                - type:Person - Find all Persons. Note that "type" is special and uses no slash "/"
-                - /author/name:Daniel - Find objects with author Daniel as nested property.
-                - /name:John AND type:Person - Complex queries
+        query: Search query (Lucene/Solr). Properties MUST start with '/'.
+               ✅ CORRECT: /title:*report*, /author/name:Daniel
+               ❌ WRONG: name:John, author/name:Daniel, type:Person
         type: Optional filter by object type (e.g., "Person", "Document", "Project")
 
     Returns:
