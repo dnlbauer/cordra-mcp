@@ -1,5 +1,7 @@
 FROM python:3.13-alpine
 
+EXPOSE 8000
+
 # Install package manager
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -17,5 +19,7 @@ COPY src src
 
 RUN uv sync \
   --locked
+
+ENV CORDRA_RUN_MODE=http
 
 CMD ["uv", "run", "cordra-mcp"]
