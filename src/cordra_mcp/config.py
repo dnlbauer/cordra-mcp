@@ -1,5 +1,7 @@
 """Configuration settings for the MCP Cordra server."""
 
+from typing import Literal
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -16,6 +18,10 @@ class CordraConfig(BaseSettings):
         default="https://localhost:8443",
         description="Base URL of the Cordra repository",
     )
+    host: str = Field(
+        default="0.0.0.0",
+        description="The host under which the MCP server runs when deployed as http run_mode",
+    )
     username: str | None = Field(
         default=None, description="Username for Cordra authentication"
     )
@@ -26,6 +32,9 @@ class CordraConfig(BaseSettings):
         default=True, description="Whether to verify SSL certificates"
     )
     timeout: int = Field(default=30, description="Request timeout in seconds")
+    run_mode: Literal["stdio", "http"] | None = Field(
+        default="stdio", description="Run mode for the MCP client"
+    )
     log_level: str = Field(
         default="INFO",
         description="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
