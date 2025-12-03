@@ -17,10 +17,10 @@ from .client import (
 from .config import CordraConfig
 
 # Initialize the MCP server
-mcp = FastMCP("cordra-mcp")
+config = CordraConfig()
+mcp = FastMCP("cordra-mcp", host=config.host, port=8000)
 
 # Initialize Cordra client at startup
-config = CordraConfig()
 cordra_client = CordraClient(config)
 
 logger = logging.getLogger(__name__)
@@ -311,8 +311,11 @@ async def initialize_server() -> None:
 
 def main() -> None:
     """Main entry point for the MCP server."""
-    asyncio.run(initialize_server())
-    mcp.run()
+    if config.run_mode == "stdio":
+        asyncio.run(initialize_server())
+        mcp.run()
+    else:
+        mcp.run(transport="streamable-http")
 
 
 if __name__ == "__main__":
