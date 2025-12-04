@@ -20,9 +20,7 @@ ensuring safe exploration without risk of data modification or corruption.
 
 ### Resources
 
-- `cordra://objects/{prefix}/{suffix}` - Retrieve a specific object by its handle identifier
 - `cordra://schemas/{schema_name}` - Schema definition for a specific type.
-- `cordra://design` - Design document containing the overall structure and configuration of the Cordra repository.
 
 ### Tools
 
@@ -36,6 +34,9 @@ ensuring safe exploration without risk of data modification or corruption.
 - `count_objects` - Count the total number of objects matching a query.
   - `query` - Lucene/Solr compatible search query
   - `type` - Optional filter by object type
+- `get_design_object` - Retrieve the Cordra design object containing repository configuration.
+  - Includes type definitions, workflow configurations, and system settings
+  - Administrative privileges are typically required to access this object
 
 #### Query Syntax
 

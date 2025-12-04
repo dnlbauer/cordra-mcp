@@ -169,51 +169,18 @@ async def get_object(object_id: str) -> str:
         raise RuntimeError(f"Failed to retrieve object {object_id}: {e}") from e
 
 
-@mcp.resource(
-    "cordra://objects/{prefix}/{suffix}",
-    name="cordra-object",
-    title="Retrieve Cordra Digital Object",
-    description="Retrieve a Digital Object and Metadata from Cordra by its ID/handle.",
-    mime_type="application/json",
+@mcp.tool(
+    name="get_design_object",
+    title="Get Cordra Design Object",
+    description="""
+    The design object is the central location where Cordra stores its configuration,
+    including type definitions, workflow configurations, and system settings.
+    Administrative privileges are typically required to access this object.
+
+    Returns: The design object as JSON
+""",
 )
-async def get_cordra_object(prefix: str, suffix: str) -> str:
-    """Retrieve a Cordra digital object by its ID.
-
-    Args:
-        prefix: The prefix part of the object ID (e.g., 'wildlive')
-        suffix: The suffix part of the object ID (e.g., '7a4b7b65f8bb155ad36d')
-
-    Returns:
-        JSON representation of the digital object
-
-    Raises:
-        RuntimeError: If the object is not found or there's an API error
-    """
-
-    object_id = f"{prefix}/{suffix}"
-    try:
-        digital_object = await cordra_client.get_object(object_id)
-        object_dict = digital_object.model_dump()
-        return json.dumps(object_dict, indent=2)
-
-    except ValueError as e:
-        raise RuntimeError(f"Invalid parameters: {e}") from e
-    except CordraNotFoundError as e:
-        raise RuntimeError(f"Object not found: {object_id}") from e
-    except CordraAuthenticationError as e:
-        raise RuntimeError(f"Authentication failed: {e}") from e
-    except CordraClientError as e:
-        raise RuntimeError(f"Failed to retrieve object {object_id}: {e}") from e
-
-
-@mcp.resource(
-    "cordra://design",
-    name="cordra-design",
-    title="Retrieve Cordra Design Object",
-    description="Retrieve the Cordra design object containing repository configuration. Administrative privileges are typically required to access this object.",
-    mime_type="application/json",
-)
-async def get_cordra_design() -> str:
+async def get_cordra_design_object() -> str:
     """Retrieve the Cordra design object containing repository configuration.
 
     The design object is the central location where Cordra stores its configuration,
