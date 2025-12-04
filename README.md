@@ -18,22 +18,29 @@ ensuring safe exploration without risk of data modification or corruption.
 
 ## MCP Architecture
 
-### Resources
-
-- `cordra://schemas/{schema_name}` - Schema definition for a specific type.
-
 ### Tools
+
+- `list_types` - List all available types in the Cordra repository.
+  - Returns a JSON array of type names that are defined in the repository
+  - Types are returned in sorted order
+
+- `get_type_schema` - Retrieve the JSON schema definition for a specific type.
+  - `type_name` - The name of the type (e.g., "Person", "Document", "Project")
+  - Returns the full schema definition as JSON
 
 - `get_object` - Retrieve a digital object by its complete ID/handle.
   - `object_id` - Complete object ID (e.g., "test/abc123")
+
 - `search_objects` - Search for digital objects using a query string with pagination support.
   - `query` - Lucene/Solr compatible search query
   - `type` - Optional filter by object type
   - `limit` - Number of results per page (default: 25)
   - `page_num` - Page number to retrieve, 0-based (default: 0)
+
 - `count_objects` - Count the total number of objects matching a query.
   - `query` - Lucene/Solr compatible search query
   - `type` - Optional filter by object type
+
 - `get_design_object` - Retrieve the Cordra design object containing repository configuration.
   - Includes type definitions, workflow configurations, and system settings
   - Administrative privileges are typically required to access this object

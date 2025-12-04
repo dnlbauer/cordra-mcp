@@ -16,6 +16,8 @@ from cordra_mcp.server import (
     count_objects,
     get_cordra_design_object,
     get_object,
+    get_type_schema,
+    list_types,
     search_objects,
 )
 
@@ -105,12 +107,137 @@ class TestGetObject:
         mock_client.get_object.assert_called_once_with("test/obj123")
 
 
-class TestSchemaResourceFunctions:
-    """Test the schema resource functions."""
+class TestListTypes:
+    """Test the list_types tool."""
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_create_schema_resource_success(self, mock_client: Any) -> None:
-        """Test successful schema resource creation."""
+    async def test_list_types_success(self, mock_client: Any) -> None:
+        """Test successful listing of available types."""
+        mock_search_result = {
+            "results": [
+                {"content": {"name": "User"}, "id": "test/user-schema"},
+                {"content": {"name": "Project"}, "id": "test/project-schema"},
+                {"content": {"name": "Document"}, "id": "test/doc-schema"},
+            ],
+            "total_size": 3,
+            "page_num": 0,
+            "page_size": 20,
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
+
+        result = await list_types()
+
+        # Verify the result is valid JSON
+        parsed_result = json.loads(result)
+        assert parsed_result == ["Document", "Project", "User"]  # Should be sorted
+
+        # Verify the client was called with correct query
+        mock_client.find.assert_called_once_with(
+            "type:Schema", page_size=20, page_num=0
+        )
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_list_types_with_pagination(self, mock_client: Any) -> None:
+        """Test listing types with pagination."""
+        first_page = {
+            "results": [
+                {"content": {"name": f"Type{i}"}, "id": f"test/schema{i}"}
+                for i in range(20)
+            ],
+            "total_size": 25,
+            "page_num": 0,
+            "page_size": 20,
+        }
+
+        second_page = {
+            "results": [
+                {"content": {"name": "ZType"}, "id": "test/zschema"},
+            ],
+            "total_size": 25,
+            "page_num": 1,
+            "page_size": 20,
+        }
+
+        mock_client.find = AsyncMock(side_effect=[first_page, second_page])
+
+        result = await list_types()
+
+        parsed_result = json.loads(result)
+        # Should contain all 21 types and be sorted
+        assert len(parsed_result) == 21
+        assert parsed_result == sorted(parsed_result)
+        assert "Type0" in parsed_result
+        assert "ZType" in parsed_result
+
+        # Verify pagination calls
+        assert mock_client.find.call_count == 2
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_list_types_missing_name(self, mock_client: Any) -> None:
+        """Test listing types when some schemas have missing name field."""
+        mock_search_result = {
+            "results": [
+                {"content": {"name": "User"}, "id": "test/user-schema"},
+                {"content": {}, "id": "test/no-name-schema"},  # Missing name
+                {"content": {"name": "Project"}, "id": "test/project-schema"},
+            ],
+            "total_size": 3,
+            "page_num": 0,
+            "page_size": 20,
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
+
+        result = await list_types()
+
+        # Only 2 types should be returned (those with name)
+        parsed_result = json.loads(result)
+        assert parsed_result == ["Project", "User"]
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_list_types_client_error(self, mock_client: Any) -> None:
+        """Test listing types with client error."""
+        mock_client.find = AsyncMock(side_effect=CordraClientError("Search failed"))
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await list_types()
+
+        assert "Failed to list types:" in str(exc_info.value)
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_list_types_authentication_error(self, mock_client: Any) -> None:
+        """Test listing types with authentication error."""
+        mock_client.find = AsyncMock(
+            side_effect=CordraAuthenticationError("Authentication failed")
+        )
+
+        with pytest.raises(RuntimeError) as exc_info:
+            await list_types()
+
+        assert "Authentication failed:" in str(exc_info.value)
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_list_types_empty(self, mock_client: Any) -> None:
+        """Test listing types when no types are available."""
+        mock_search_result = {
+            "results": [],
+            "total_size": 0,
+            "page_num": 0,
+            "page_size": 20,
+        }
+        mock_client.find = AsyncMock(return_value=mock_search_result)
+
+        result = await list_types()
+
+        parsed_result = json.loads(result)
+        assert parsed_result == []
+
+
+class TestGetTypeSchema:
+    """Test the get_type_schema tool."""
+
+    @patch("cordra_mcp.server.cordra_client")
+    async def test_get_type_schema_success(self, mock_client: Any) -> None:
+        """Test successful schema retrieval."""
         mock_schema = DigitalObject(
             id="test/user-schema",
             type="Schema",
@@ -118,9 +245,7 @@ class TestSchemaResourceFunctions:
         )
         mock_client.get_schema = AsyncMock(return_value=mock_schema)
 
-        from cordra_mcp.server import create_schema_resource
-
-        result = await create_schema_resource("User")
+        result = await get_type_schema("User")
 
         # Verify the result is valid JSON
         parsed_result = json.loads(result)
@@ -132,131 +257,58 @@ class TestSchemaResourceFunctions:
         mock_client.get_schema.assert_called_once_with("User")
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_create_schema_resource_not_found(self, mock_client: Any) -> None:
-        """Test schema resource creation with schema not found."""
+    async def test_get_type_schema_not_found(self, mock_client: Any) -> None:
+        """Test schema retrieval with type not found."""
         mock_client.get_schema = AsyncMock(
             side_effect=CordraNotFoundError("Schema not found")
         )
 
-        from cordra_mcp.server import create_schema_resource
-
         with pytest.raises(RuntimeError) as exc_info:
-            await create_schema_resource("NonExistent")
+            await get_type_schema("NonExistent")
 
-        assert "Schema not found: NonExistent" in str(exc_info.value)
+        assert "Type 'NonExistent' not found" in str(exc_info.value)
         mock_client.get_schema.assert_called_once_with("NonExistent")
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_register_schema_resources_success(self, mock_client: Any) -> None:
-        """Test successful schema resource registration."""
-        mock_search_result = {
-            "results": [
-                {"content": {"name": "User"}, "id": "test/user-schema"},
-                {"content": {"name": "Project"}, "id": "test/project-schema"},
-                {"content": {"name": "Document"}, "id": "test/doc-schema"},
-            ],
-            "total_size": 3,
-            "page_num": 0,
-            "page_size": 20,
-        }
-        mock_client.find = AsyncMock(return_value=mock_search_result)
-
-        # Mock the mcp.add_resource method
-        with patch("cordra_mcp.server.mcp") as mock_mcp:
-            from cordra_mcp.server import register_schema_resources
-
-            await register_schema_resources()
-
-        # Verify the client was called with correct query
-        mock_client.find.assert_called_once_with(
-            "type:Schema", page_size=20, page_num=0
+    async def test_get_type_schema_authentication_error(self, mock_client: Any) -> None:
+        """Test schema retrieval with authentication error."""
+        mock_client.get_schema = AsyncMock(
+            side_effect=CordraAuthenticationError("Authentication failed")
         )
 
-        # Verify add_resource was called for each schema
-        assert mock_mcp.add_resource.call_count == 3
+        with pytest.raises(RuntimeError) as exc_info:
+            await get_type_schema("User")
+
+        assert "Authentication failed:" in str(exc_info.value)
 
     @patch("cordra_mcp.server.cordra_client")
-    async def test_register_schema_resources_missing_name(
-        self, mock_client: Any
-    ) -> None:
-        """Test schema resource registration with objects missing name field."""
-        mock_search_result = {
-            "results": [
-                {"content": {"name": "User"}, "id": "test/user-schema"},
-                {"content": {}, "id": "test/no-name-schema"},  # Missing name field
-                {"content": {"name": "Project"}, "id": "test/project-schema"},
-            ],
-            "total_size": 3,
-            "page_num": 0,
-            "page_size": 20,
-        }
-        mock_client.find = AsyncMock(return_value=mock_search_result)
-
-        with patch("cordra_mcp.server.mcp") as mock_mcp:
-            from cordra_mcp.server import register_schema_resources
-
-            await register_schema_resources()
-
-        # Only 2 schemas should be registered (those with name field)
-        assert mock_mcp.add_resource.call_count == 2
-
-    @patch("cordra_mcp.server.cordra_client")
-    async def test_register_schema_resources_client_error(
-        self, mock_client: Any
-    ) -> None:
-        """Test schema resource registration with client error."""
-        mock_client.find = AsyncMock(side_effect=CordraClientError("Search failed"))
-
-        # Should not raise an exception, just log a warning
-        from cordra_mcp.server import register_schema_resources
-
-        await register_schema_resources()  # Should complete without raising
-
-        mock_client.find.assert_called_once_with(
-            "type:Schema", page_size=20, page_num=0
+    async def test_get_type_schema_client_error(self, mock_client: Any) -> None:
+        """Test schema retrieval with client error."""
+        mock_client.get_schema = AsyncMock(
+            side_effect=CordraClientError("Connection failed")
         )
 
+        with pytest.raises(RuntimeError) as exc_info:
+            await get_type_schema("User")
+
+        assert "Failed to retrieve schema for type 'User':" in str(exc_info.value)
+
     @patch("cordra_mcp.server.cordra_client")
-    async def test_register_schema_resources_pagination(self, mock_client: Any) -> None:
-        """Test schema resource registration with pagination."""
-        # Mock multiple pages of results
-        # First page with full 20 results (simulating more schemas)
-        first_page_schemas = [
-            {"content": {"name": f"Schema{i}"}, "id": f"test/schema{i}"}
-            for i in range(20)
-        ]
-        first_page = {
-            "results": first_page_schemas,
-            "total_size": 25,
-            "page_num": 0,
-            "page_size": 20,
-        }
+    async def test_get_type_schema_json_formatting(self, mock_client: Any) -> None:
+        """Test that schema is properly formatted as JSON."""
+        mock_schema = DigitalObject(
+            id="test/schema",
+            type="Schema",
+            content={"name": "Test", "properties": {"field": "value"}},
+        )
+        mock_client.get_schema = AsyncMock(return_value=mock_schema)
 
-        # Second page with fewer results (indicating last page)
-        second_page = {
-            "results": [
-                {"content": {"name": "Document"}, "id": "test/doc-schema"},
-            ],
-            "total_size": 25,
-            "page_num": 1,
-            "page_size": 20,
-        }
+        result = await get_type_schema("Test")
 
-        # Return first page, then second page (with fewer results indicating last page)
-        mock_client.find = AsyncMock(side_effect=[first_page, second_page])
-
-        with patch("cordra_mcp.server.mcp") as mock_mcp:
-            from cordra_mcp.server import register_schema_resources
-
-            await register_schema_resources()
-
-        # Verify pagination calls
-        assert mock_client.find.call_count == 2
-        mock_client.find.assert_any_call("type:Schema", page_size=20, page_num=0)
-        mock_client.find.assert_any_call("type:Schema", page_size=20, page_num=1)
-
-        # Verify all 21 schemas were registered (20 from first page + 1 from second page)
-        assert mock_mcp.add_resource.call_count == 21
+        # Verify it's valid JSON with proper indentation
+        parsed_result = json.loads(result)
+        assert isinstance(parsed_result, dict)
+        assert "  " in result  # Should have 2-space indentation
 
 
 class TestSearchObjects:

@@ -1,11 +1,9 @@
 """MCP server for Cordra digital object repository."""
 
-import asyncio
 import json
 import logging
 
 from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.resources import FunctionResource
 
 from . import __version__
 from .client import (
@@ -206,25 +204,25 @@ async def get_cordra_design_object() -> str:
         raise RuntimeError(f"Failed to retrieve design object: {e}") from e
 
 
-async def create_schema_resource(schema_name: str) -> str:
-    """Create content for a specific schema resource."""
-    try:
-        schema_object = await cordra_client.get_schema(schema_name)
-        schema_dict = schema_object.model_dump()
-        return json.dumps(schema_dict, indent=2)
-    except CordraNotFoundError as e:
-        raise RuntimeError(f"Schema not found: {schema_name}") from e
-    except CordraAuthenticationError as e:
-        raise RuntimeError(f"Authentication failed: {e}") from e
-    except CordraClientError as e:
-        raise RuntimeError(f"Failed to retrieve schema {schema_name}: {e}") from e
+@mcp.tool(
+    name="list_types",
+    title="List Available Types",
+    description="""List all available object types in the Cordra repository.
 
+Returns a list of type names that are defined in the repository as json array.""",
+)
+async def list_types() -> str:
+    """List all available types in the Cordra repository.
 
-async def register_schema_resources() -> None:
-    """Register individual schema resources dynamically."""
+    Returns:
+        JSON string containing a list of type names
+
+    Raises:
+        RuntimeError: If there's an API error or authentication failure
+    """
     try:
-        # Get all available schemas using pagination
-        all_schemas = []
+        # Get all available types using pagination
+        all_types = []
         page_num = 0
         page_size = 20
 
@@ -233,7 +231,11 @@ async def register_schema_resources() -> None:
                 "type:Schema", page_size=page_size, page_num=page_num
             )
             schemas = search_result["results"]
-            all_schemas.extend(schemas)
+
+            for schema in schemas:
+                type_name = schema.get("content", {}).get("name")
+                if type_name:
+                    all_types.append(type_name)
 
             # Check if we've retrieved all schemas
             if len(schemas) < page_size:
@@ -241,45 +243,55 @@ async def register_schema_resources() -> None:
 
             page_num += 1
 
-        for schema in all_schemas:
-            schema_name = schema.get("content", {}).get("name")
-            if not schema_name:
-                logger.warning("Schema without a name found, skipping.")
-                continue
+        all_types.sort()
+        return json.dumps(all_types, indent=2)
 
-            logger.info(f"Registering schema resource for cordra type {schema_name}")
-
-            async def schema_fn(name: str = schema_name) -> str:
-                return await create_schema_resource(name)
-
-            mcp.add_resource(
-                FunctionResource.from_function(
-                    uri=f"cordra://schemas/{schema_name}",
-                    fn=schema_fn,
-                    name=f"cordra-type-schema-{schema_name}",
-                    title=f"Cordra Type Schema: {schema_name}",
-                    description=f"Retrieve the JSON schema for the Cordra Type {schema_name}",
-                    mime_type="application/json",
-                )
-            )
-
-        logger.info(f"Registered {len(all_schemas)} schema resources")
-
-    except Exception as e:
-        logger.warning(f"Failed to register schema resources: {e}")
+    except CordraAuthenticationError as e:
+        raise RuntimeError(f"Authentication failed: {e}") from e
+    except CordraClientError as e:
+        raise RuntimeError(f"Failed to list types: {e}") from e
 
 
-async def initialize_server() -> None:
-    """Initialize server resources before starting."""
-    logger.info(f"Initializing Cordra MCP server v{__version__}...")
-    await register_schema_resources()
-    logger.info("Server initialization complete")
+@mcp.tool(
+    name="get_type_schema",
+    title="Get Type Schema",
+    description="""Retrieve the JSON schema definition for a specific type.
+
+Args:
+    type_name: The name of the type (e.g., "Person", "Document", "Project")
+
+Returns: The full schema definition as JSON""",
+)
+async def get_type_schema(type_name: str) -> str:
+    """Retrieve the JSON schema definition for a specific object type.
+
+    Args:
+        type_name: The name of the type to retrieve the schema for
+
+    Returns:
+        JSON string containing the schema definition
+
+    Raises:
+        RuntimeError: If the type is not found, authentication fails, or there's an API error
+    """
+    try:
+        schema_object = await cordra_client.get_schema(type_name)
+        schema_dict = schema_object.model_dump()
+        return json.dumps(schema_dict, indent=2)
+    except CordraNotFoundError as e:
+        raise RuntimeError(f"Type '{type_name}' not found") from e
+    except CordraAuthenticationError as e:
+        raise RuntimeError(f"Authentication failed: {e}") from e
+    except CordraClientError as e:
+        raise RuntimeError(
+            f"Failed to retrieve schema for type '{type_name}': {e}"
+        ) from e
 
 
 def main() -> None:
     """Main entry point for the MCP server."""
+    logger.info(f"Starting Cordra MCP server v{__version__}...")
     if config.run_mode == "stdio":
-        asyncio.run(initialize_server())
         mcp.run()
     else:
         mcp.run(transport="streamable-http")
